@@ -237,9 +237,6 @@
             <h3 class="text-base font-semibold text-gray-800 mb-2">Classification Rules</h3>
             <p class="text-xs text-gray-600 mb-3">Exports the loaded rules that matched your categorized transactions, including summary match counts and sample transactions.</p>
             <div class="flex flex-col gap-2">
-              <button id="export-rules-button" class="px-4 py-2 bg-slate-700 text-white rounded-md shadow hover:bg-slate-600 transition">
-                Download Rules JSON
-              </button>
               <button id="export-rules-csv-button" class="px-4 py-2 bg-slate-500 text-white rounded-md shadow hover:bg-slate-400 transition">
                 Download Rules CSV
               </button>
@@ -1130,7 +1127,12 @@ const state = {
       headers.forEach(h => {
         const td = document.createElement('td');
         td.className = 'px-3 py-2';
-        td.textContent = getDisplayValueForColumn(h, tx[h]);
+        const value = getDisplayValueForColumn(h, tx[h]);
+        td.textContent = value;
+        if ((h || '').toString().toLowerCase().includes('amount')) {
+          const tone = getAmountCssClass(tx[h]);
+          if (tone) td.className += ' ' + tone;
+        }
         tr.appendChild(td);
       });
 
@@ -1305,7 +1307,12 @@ const state = {
       Object.keys(tx).forEach(h => {
         const td = document.createElement('td');
         td.className = 'px-3 py-2';
-        td.textContent = getDisplayValueForColumn(h, tx[h]);
+        const value = getDisplayValueForColumn(h, tx[h]);
+        td.textContent = value;
+        if ((h || '').toString().toLowerCase().includes('amount')) {
+          const tone = getAmountCssClass(tx[h]);
+          if (tone) td.className += ' ' + tone;
+        }
         tr.appendChild(td);
       });
 
@@ -1427,6 +1434,12 @@ const state = {
   function sanitizeClipboardValue(value) {
     if (value === null || value === undefined) return '';
     return value.toString().replace(/\r?\n|\r/g, ' ').trim();
+  }
+
+  function getAmountCssClass(value) {
+    const amount = parseAmount(value);
+    if (!Number.isFinite(amount) || Math.abs(amount) < 1e-9) return '';
+    return amount > 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
   }
 
   function fallbackCopyToClipboard(text) {
@@ -2110,27 +2123,6 @@ const state = {
     return { content: lines.join('\r\n'), count: rows.length };
   }
 
-  function handleRulesExportClick() {
-    setExportMessage('export-rules-message', '');
-    const usage = collectRulesUsage();
-    if (!usage || usage.totalRules === 0) {
-      setExportMessage('export-rules-message', 'No classification rules are loaded to export.', 'error');
-      return;
-    }
-    if (!usage.rules || usage.rules.length === 0) {
-      setExportMessage('export-rules-message', 'Loaded rules did not match any categorized transactions.', 'error');
-      return;
-    }
-    const stamp = new Date().toISOString().slice(0, 10);
-    const jsonContent = JSON.stringify(usage, null, 2);
-    triggerDownload(`Rules_Export_${stamp}.json`, jsonContent, 'application/json;charset=utf-8');
-    setExportMessage(
-      'export-rules-message',
-      `Exported ${usage.matchedRules} rule${usage.matchedRules === 1 ? '' : 's'} with match details.`,
-      'success'
-    );
-  }
-
   function handleRulesCsvExportClick() {
     setExportMessage('export-rules-message', '');
     const usage = collectRulesUsage();
@@ -2203,8 +2195,6 @@ const state = {
   if (exportCoaButton) exportCoaButton.addEventListener('click', handleCoaExportClick);
   const exportJournalButton = document.getElementById('export-journal-button');
   if (exportJournalButton) exportJournalButton.addEventListener('click', handleJournalExportClick);
-  const exportRulesButton = document.getElementById('export-rules-button');
-  if (exportRulesButton) exportRulesButton.addEventListener('click', handleRulesExportClick);
   const exportRulesCsvButton = document.getElementById('export-rules-csv-button');
   if (exportRulesCsvButton) exportRulesCsvButton.addEventListener('click', handleRulesCsvExportClick);
   const copySelectionButton = document.getElementById('copy-selection-button');
