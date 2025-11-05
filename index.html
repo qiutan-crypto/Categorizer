@@ -301,53 +301,113 @@
           </button>
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-5">
-          <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
-            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Beginning Balance</div>
-            <div id="reconcile-beginning" class="mt-1 text-xl font-bold text-gray-800">$0.00</div>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div id="reconcile-view-tabs" class="inline-flex gap-2 bg-gray-100 p-1 rounded-md">
+            <button data-reconcile-view="summary" class="reconcile-sub-tab px-3 py-1.5 text-sm font-semibold rounded-md bg-white text-indigo-600 shadow">Summary</button>
+            <button data-reconcile-view="detail" class="reconcile-sub-tab px-3 py-1.5 text-sm font-semibold text-gray-600 rounded-md">Monthly Transactions</button>
           </div>
-          <div class="rounded-lg border border-red-200 bg-red-50 p-4 shadow-sm">
-            <div class="flex items-center justify-between text-xs font-semibold text-red-600 uppercase tracking-wide">
-              <span>Payments</span>
-              <span id="reconcile-payments-count" class="text-[11px] font-medium text-red-500"></span>
+          <div id="reconcile-detail-current-range" class="hidden text-sm text-gray-500 md:text-right"></div>
+        </div>
+
+        <div id="reconcile-summary-view" class="space-y-6">
+          <div class="grid gap-4 lg:grid-cols-5">
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+              <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Beginning Balance</div>
+              <div id="reconcile-beginning" class="mt-1 text-xl font-bold text-gray-800">$0.00</div>
             </div>
-            <div id="reconcile-payments" class="mt-1 text-xl font-bold text-red-600">-$0.00</div>
-          </div>
-          <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-            <div class="flex items-center justify-between text-xs font-semibold text-emerald-600 uppercase tracking-wide">
-              <span>Deposits</span>
-              <span id="reconcile-deposits-count" class="text-[11px] font-medium text-emerald-500"></span>
+            <div class="rounded-lg border border-red-200 bg-red-50 p-4 shadow-sm">
+              <div class="flex items-center justify-between text-xs font-semibold text-red-600 uppercase tracking-wide">
+                <span>Payments</span>
+                <span id="reconcile-payments-count" class="text-[11px] font-medium text-red-500"></span>
+              </div>
+              <div id="reconcile-payments" class="mt-1 text-xl font-bold text-red-600">-$0.00</div>
             </div>
-            <div id="reconcile-deposits" class="mt-1 text-xl font-bold text-emerald-600">$0.00</div>
+            <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+              <div class="flex items-center justify-between text-xs font-semibold text-emerald-600 uppercase tracking-wide">
+                <span>Deposits</span>
+                <span id="reconcile-deposits-count" class="text-[11px] font-medium text-emerald-500"></span>
+              </div>
+              <div id="reconcile-deposits" class="mt-1 text-xl font-bold text-emerald-600">$0.00</div>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Cleared Balance</div>
+              <div id="reconcile-cleared" class="mt-1 text-xl font-bold text-gray-800">$0.00</div>
+            </div>
+            <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
+              <div class="text-xs font-semibold text-amber-600 uppercase tracking-wide">Difference</div>
+              <div id="reconcile-difference" class="mt-1 text-xl font-bold text-amber-600">$0.00</div>
+              <div id="reconcile-statement" class="mt-2 text-xs text-gray-600">Statement Ending Balance: $0.00</div>
+            </div>
           </div>
-          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Cleared Balance</div>
-            <div id="reconcile-cleared" class="mt-1 text-xl font-bold text-gray-800">$0.00</div>
-          </div>
-          <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
-            <div class="text-xs font-semibold text-amber-600 uppercase tracking-wide">Difference</div>
-            <div id="reconcile-difference" class="mt-1 text-xl font-bold text-amber-600">$0.00</div>
-            <div id="reconcile-statement" class="mt-2 text-xs text-gray-600">Statement Ending Balance: $0.00</div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-gray-600 mb-2">Monthly Ending Balances</h3>
+            <div class="overflow-x-auto border border-slate-200 rounded-md">
+              <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 text-gray-500 uppercase text-xs tracking-wide">
+                  <tr>
+                    <th class="px-3 py-2 text-left">Month</th>
+                    <th class="px-3 py-2 text-right">Net Activity</th>
+                    <th class="px-3 py-2 text-right">Ending Balance</th>
+                  </tr>
+                </thead>
+                <tbody id="reconcile-monthly-body" class="bg-white">
+                  <tr>
+                    <td class="px-3 py-3 text-center text-gray-400" colspan="3">No transactions available.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <div>
-          <h3 class="text-sm font-semibold text-gray-600 mb-2">Monthly Ending Balances</h3>
+        <div id="reconcile-detail-view" class="space-y-6 hidden">
+          <div>
+            <p id="reconcile-detail-subtitle" class="text-sm text-gray-600">Select a month from the summary to view its transactions.</p>
+          </div>
+
           <div class="overflow-x-auto border border-slate-200 rounded-md">
             <table class="min-w-full text-sm">
               <thead class="bg-gray-50 text-gray-500 uppercase text-xs tracking-wide">
                 <tr>
-                  <th class="px-3 py-2 text-left">Month</th>
-                  <th class="px-3 py-2 text-right">Net Activity</th>
-                  <th class="px-3 py-2 text-right">Ending Balance</th>
+                  <th class="px-3 py-2 text-left">Date</th>
+                  <th class="px-3 py-2 text-left">Description</th>
+                  <th class="px-3 py-2 text-right">Withdraw</th>
+                  <th class="px-3 py-2 text-right">Deposit</th>
+                  <th class="px-3 py-2 text-right">Daily Balance</th>
                 </tr>
               </thead>
-              <tbody id="reconcile-monthly-body" class="bg-white">
+              <tbody id="reconcile-detail-body" class="bg-white">
                 <tr>
-                  <td class="px-3 py-3 text-center text-gray-400" colspan="3">No transactions available.</td>
+                  <td class="px-3 py-3 text-center text-gray-400" colspan="5">No month selected.</td>
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <div id="reconcile-detail-summary" class="grid gap-4 lg:grid-cols-4">
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+              <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Beginning Balance</div>
+              <div id="reconcile-detail-beginning" class="mt-1 text-lg font-bold text-gray-800">$0.00</div>
+            </div>
+            <div class="rounded-lg border border-red-200 bg-red-50 p-4 shadow-sm">
+              <div class="flex items-center justify-between text-xs font-semibold text-red-600 uppercase tracking-wide">
+                <span>Payments</span>
+                <span id="reconcile-detail-payments-count" class="text-[11px] font-medium text-red-500"></span>
+              </div>
+              <div id="reconcile-detail-payments" class="mt-1 text-lg font-bold text-red-600">-$0.00</div>
+            </div>
+            <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+              <div class="flex items-center justify-between text-xs font-semibold text-emerald-600 uppercase tracking-wide">
+                <span>Deposits</span>
+                <span id="reconcile-detail-deposits-count" class="text-[11px] font-medium text-emerald-500"></span>
+              </div>
+              <div id="reconcile-detail-deposits" class="mt-1 text-lg font-bold text-emerald-600">$0.00</div>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ending Balance</div>
+              <div id="reconcile-detail-ending" class="mt-1 text-lg font-bold text-gray-800">$0.00</div>
+            </div>
           </div>
         </div>
       </div>
@@ -449,6 +509,9 @@ const state = {
     dragStartOrder: null,
     dragMoved: false,
     dragJustFinished: false,
+    reconcileView: 'summary',
+    reconcileMonthlyData: [],
+    selectedReconcileMonthKey: null,
     beginningBalance: 0,
     statementBalance: 0
   };
@@ -1109,12 +1172,19 @@ const state = {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelector(`[data-content="${tab}"]`).classList.remove('hidden');
     state.sort.tab = tab;
-    if (tab === 'reports') updateReports();
-    if (tab === 'reconcile') updateReconcileView();
+    if (tab === 'reports') {
+      updateReports();
+    } else if (tab === 'reconcile') {
+      updateReconcileView();
+      setReconcileView(state.reconcileView || 'summary');
+    }
   }));
 
   document.querySelectorAll('.report-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => setReportView(btn.dataset.reportTab));
+  });
+  document.querySelectorAll('.reconcile-sub-tab').forEach(btn => {
+    btn.addEventListener('click', () => setReconcileView(btn.dataset.reconcileView || 'summary'));
   });
   setReportView(state.reportView);
   // default
@@ -1493,6 +1563,36 @@ const state = {
     updateSelectionUI();
   }
 
+  function setReconcileView(view) {
+    const desired = view === 'detail' ? 'detail' : 'summary';
+    state.reconcileView = desired;
+
+    const summarySection = document.getElementById('reconcile-summary-view');
+    const detailSection = document.getElementById('reconcile-detail-view');
+    if (summarySection) summarySection.classList.toggle('hidden', desired !== 'summary');
+    if (detailSection) detailSection.classList.toggle('hidden', desired !== 'detail');
+
+    const rangeEl = document.getElementById('reconcile-detail-current-range');
+    if (rangeEl) {
+      const hasRange = Boolean((rangeEl.dataset.rangeAvailable || '').trim());
+      const shouldShow = desired === 'detail' && hasRange;
+      rangeEl.classList.toggle('hidden', !shouldShow);
+    }
+
+    document.querySelectorAll('.reconcile-sub-tab').forEach(btn => {
+      const btnView = (btn.dataset.reconcileView === 'detail') ? 'detail' : 'summary';
+      const isActive = btnView === desired;
+      btn.classList.toggle('bg-white', isActive);
+      btn.classList.toggle('shadow', isActive);
+      btn.classList.toggle('text-indigo-600', isActive);
+      btn.classList.toggle('text-gray-600', !isActive);
+    });
+
+    if (desired === 'detail') {
+      renderReconcileDetail();
+    }
+  }
+
   function getTransactionCopyDate(tx) {
     const fields = ['Date', 'Transaction Date', 'Transactions Date', 'Txn Date', 'Posted Date'];
     for (const field of fields) {
@@ -1596,9 +1696,10 @@ const state = {
 
     const monthlyMap = new Map();
 
-    txs.forEach(tx => {
+    txs.forEach((tx, idx) => {
       const amount = getTransactionAmount(tx);
       if (!Number.isFinite(amount) || amount === 0) return;
+
       if (amount > 0) {
         depositsTotal += amount;
         depositCount += 1;
@@ -1606,11 +1707,48 @@ const state = {
         paymentsTotal += amount;
         paymentCount += 1;
       }
+
       const rawDate = tx['Cleared Date'] ?? tx['Date'] ?? tx.date ?? null;
       const date = coerceDateValue(rawDate);
       if (!date) return;
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      monthlyMap.set(key, (monthlyMap.get(key) || 0) + amount);
+
+      const year = date.getFullYear();
+      const monthIndex = date.getMonth();
+      const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+      const monthLabel = formatMonthLabel(year, monthIndex);
+      const monthEntry = monthlyMap.get(monthKey) || {
+        key: monthKey,
+        year,
+        monthIndex,
+        label: monthLabel,
+        netActivity: 0,
+        paymentsTotal: 0,
+        paymentsCount: 0,
+        depositsTotal: 0,
+        depositsCount: 0,
+        transactions: []
+      };
+
+      monthEntry.netActivity += amount;
+      if (amount > 0) {
+        monthEntry.depositsTotal += amount;
+        monthEntry.depositsCount += 1;
+      } else {
+        monthEntry.paymentsTotal += amount;
+        monthEntry.paymentsCount += 1;
+      }
+
+      const displayDate = formatDateForIif(date);
+      const description = getTransactionCopyDescription(tx);
+      monthEntry.transactions.push({
+        amount,
+        date,
+        displayDate,
+        description,
+        originalIndex: idx
+      });
+
+      monthlyMap.set(monthKey, monthEntry);
     });
 
     const cleared = beginning + paymentsTotal + depositsTotal;
@@ -1639,29 +1777,228 @@ const state = {
       differenceEl.className = base + tone;
     }
 
+    const monthlyEntries = Array.from(monthlyMap.values()).sort((a, b) => {
+      if (a.year === b.year) return a.monthIndex - b.monthIndex;
+      return a.year - b.year;
+    });
+
+    let runningBalance = beginning;
+    monthlyEntries.forEach(entry => {
+      entry.beginningBalance = runningBalance;
+
+      entry.transactions.sort((a, b) => {
+        const diff = a.date.getTime() - b.date.getTime();
+        if (diff !== 0) return diff;
+        return a.originalIndex - b.originalIndex;
+      });
+
+      const detailRows = [];
+      let dayBuffer = [];
+      let currentDay = '';
+      let monthRunning = runningBalance;
+      let firstDate = null;
+      let lastDate = null;
+
+      const flushDay = () => {
+        if (dayBuffer.length === 0) return;
+        dayBuffer.forEach((tx, index) => {
+          monthRunning += tx.amount;
+          const isLastOfDay = index === dayBuffer.length - 1;
+          detailRows.push({
+            date: tx.date,
+            displayDate: tx.displayDate,
+            description: tx.description,
+            amount: tx.amount,
+            showBalance: isLastOfDay,
+            runningBalance: isLastOfDay ? monthRunning : null
+          });
+        });
+        dayBuffer = [];
+      };
+
+      entry.transactions.forEach(tx => {
+        if (!firstDate || tx.date < firstDate) firstDate = tx.date;
+        if (!lastDate || tx.date > lastDate) lastDate = tx.date;
+        const dayKey = `${tx.date.getFullYear()}-${String(tx.date.getMonth() + 1).padStart(2, '0')}-${String(tx.date.getDate()).padStart(2, '0')}`;
+        if (currentDay && dayKey !== currentDay) flushDay();
+        currentDay = dayKey;
+        dayBuffer.push(tx);
+      });
+
+      flushDay();
+
+      entry.rows = detailRows;
+      entry.endingBalance = monthRunning;
+      entry.startDate = firstDate;
+      entry.endDate = lastDate;
+
+      runningBalance = entry.endingBalance;
+    });
+
     const monthlyBody = document.getElementById('reconcile-monthly-body');
     if (monthlyBody) {
-      if (monthlyMap.size === 0) {
+      if (monthlyEntries.length === 0) {
         monthlyBody.innerHTML = '<tr><td class="px-3 py-3 text-center text-gray-400" colspan="3">No transactions available.</td></tr>';
       } else {
-        const entries = Array.from(monthlyMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-        let runningBalance = beginning;
-        const rows = entries.map(([key, net]) => {
-          const [yearStr, monthStr] = key.split('-');
-          const label = formatMonthLabel(Number(yearStr), Number(monthStr) - 1);
-          runningBalance += net;
-          return `
-            <tr class="border-b last:border-b-0">
-              <td class="px-3 py-2 text-gray-700">${label}</td>
-              <td class="px-3 py-2 text-right ${net >= 0 ? 'text-emerald-600 font-semibold' : 'text-red-600 font-semibold'}">${formatCurrency(net)}</td>
-              <td class="px-3 py-2 text-right font-semibold text-gray-700">${formatCurrency(runningBalance)}</td>
-            </tr>`;
-        }).join('');
-        monthlyBody.innerHTML = rows;
+        monthlyBody.innerHTML = '';
+        monthlyEntries.forEach(entry => {
+          const tr = document.createElement('tr');
+          tr.className = 'border-b last:border-b-0 cursor-pointer transition hover:bg-indigo-50';
+          if (state.selectedReconcileMonthKey === entry.key) {
+            tr.classList.add('bg-indigo-50/70');
+          }
+          tr.dataset.monthKey = entry.key;
+
+          const nameTd = document.createElement('td');
+          nameTd.className = 'px-3 py-2 text-gray-700 font-medium';
+          nameTd.textContent = entry.label;
+
+          const netTd = document.createElement('td');
+          netTd.className = `px-3 py-2 text-right ${entry.netActivity >= 0 ? 'text-emerald-600 font-semibold' : 'text-red-600 font-semibold'}`;
+          netTd.textContent = formatCurrency(entry.netActivity);
+
+          const endingTd = document.createElement('td');
+          endingTd.className = 'px-3 py-2 text-right font-semibold text-gray-700';
+          endingTd.textContent = formatCurrency(entry.endingBalance);
+
+          tr.appendChild(nameTd);
+          tr.appendChild(netTd);
+          tr.appendChild(endingTd);
+
+          tr.addEventListener('click', () => {
+            state.selectedReconcileMonthKey = entry.key;
+            setReconcileView('detail');
+          });
+
+          monthlyBody.appendChild(tr);
+        });
       }
     }
+
+    const validKeys = new Set(monthlyEntries.map(entry => entry.key));
+    if (state.selectedReconcileMonthKey && !validKeys.has(state.selectedReconcileMonthKey)) {
+      state.selectedReconcileMonthKey = monthlyEntries.length > 0 ? monthlyEntries[monthlyEntries.length - 1].key : null;
+    }
+
+    state.reconcileMonthlyData = monthlyEntries;
+
+    renderReconcileDetail();
+    setReconcileView(state.reconcileView || 'summary');
   }
 
+  function renderReconcileDetail() {
+    const subtitleEl = document.getElementById('reconcile-detail-subtitle');
+    const rangeEl = document.getElementById('reconcile-detail-current-range');
+    const bodyEl = document.getElementById('reconcile-detail-body');
+    const beginningEl = document.getElementById('reconcile-detail-beginning');
+    const paymentsEl = document.getElementById('reconcile-detail-payments');
+    const paymentsCountEl = document.getElementById('reconcile-detail-payments-count');
+    const depositsEl = document.getElementById('reconcile-detail-deposits');
+    const depositsCountEl = document.getElementById('reconcile-detail-deposits-count');
+    const endingEl = document.getElementById('reconcile-detail-ending');
+
+    const data = Array.isArray(state.reconcileMonthlyData) ? state.reconcileMonthlyData : [];
+    const selectedKey = state.selectedReconcileMonthKey;
+    const entry = selectedKey ? data.find(item => item.key === selectedKey) : null;
+    const defaultSubtitle = 'Select a month from the summary to view its transactions.';
+
+    const rows = document.querySelectorAll('#reconcile-monthly-body tr');
+    rows.forEach(row => {
+      if (row.dataset && row.dataset.monthKey === selectedKey) row.classList.add('bg-indigo-50/70');
+      else row.classList.remove('bg-indigo-50/70');
+    });
+
+    if (!entry || !entry.rows || entry.rows.length === 0) {
+      if (subtitleEl) subtitleEl.textContent = defaultSubtitle;
+      if (rangeEl) {
+        rangeEl.textContent = '';
+        rangeEl.dataset.rangeAvailable = '';
+        rangeEl.classList.add('hidden');
+      }
+      if (bodyEl) {
+        bodyEl.innerHTML = '<tr><td class="px-3 py-3 text-center text-gray-400" colspan="5">No month selected.</td></tr>';
+      }
+      if (beginningEl) beginningEl.textContent = formatCurrency(0);
+      if (paymentsEl) paymentsEl.textContent = formatCurrency(0);
+      if (depositsEl) depositsEl.textContent = formatCurrency(0);
+      if (endingEl) endingEl.textContent = formatCurrency(0);
+      if (paymentsCountEl) paymentsCountEl.textContent = '';
+      if (depositsCountEl) depositsCountEl.textContent = '';
+      return;
+    }
+
+    if (subtitleEl) subtitleEl.textContent = `Transactions for ${entry.label}`;
+
+    if (rangeEl) {
+      let rangeText = '';
+      if (entry.startDate && entry.endDate) {
+        const start = formatDateForIif(entry.startDate);
+        const end = formatDateForIif(entry.endDate);
+        rangeText = start === end ? `Date: ${start}` : `Date range: ${start} - ${end}`;
+      }
+      rangeEl.textContent = rangeText;
+      rangeEl.dataset.rangeAvailable = rangeText ? '1' : '';
+      const shouldShow = !!rangeText && state.reconcileView === 'detail';
+      rangeEl.classList.toggle('hidden', !shouldShow);
+    }
+
+    if (bodyEl) {
+      bodyEl.innerHTML = '';
+      entry.rows.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b last:border-b-0';
+
+        const dateTd = document.createElement('td');
+        dateTd.className = 'px-3 py-2 text-gray-700 whitespace-nowrap';
+        dateTd.textContent = row.displayDate || '';
+
+        const descTd = document.createElement('td');
+        descTd.className = 'px-3 py-2 text-gray-700';
+        descTd.textContent = row.description || '';
+
+        const withdrawTd = document.createElement('td');
+        withdrawTd.className = 'px-3 py-2 text-right text-red-600 font-semibold';
+        withdrawTd.textContent = row.amount < 0 ? formatCurrency(row.amount) : '';
+
+        const depositTd = document.createElement('td');
+        depositTd.className = 'px-3 py-2 text-right text-emerald-600 font-semibold';
+        depositTd.textContent = row.amount > 0 ? formatCurrency(row.amount) : '';
+
+        const balanceTd = document.createElement('td');
+        balanceTd.className = 'px-3 py-2 text-right text-gray-700 whitespace-nowrap font-semibold';
+        balanceTd.textContent = row.showBalance && Number.isFinite(row.runningBalance)
+          ? formatCurrency(row.runningBalance)
+          : '';
+
+        tr.appendChild(dateTd);
+        tr.appendChild(descTd);
+        tr.appendChild(withdrawTd);
+        tr.appendChild(depositTd);
+        tr.appendChild(balanceTd);
+
+        bodyEl.appendChild(tr);
+      });
+
+      if (entry.rows.length === 0) {
+        bodyEl.innerHTML = '<tr><td class="px-3 py-3 text-center text-gray-400" colspan="5">No transactions available for this month.</td></tr>';
+      }
+    }
+
+    if (beginningEl) beginningEl.textContent = formatCurrency(entry.beginningBalance || 0);
+    if (endingEl) endingEl.textContent = formatCurrency(entry.endingBalance || 0);
+
+    if (paymentsEl) paymentsEl.textContent = formatCurrency(entry.paymentsTotal || 0);
+    if (paymentsCountEl) {
+      const count = Number(entry.paymentsCount) || 0;
+      paymentsCountEl.textContent = `${count} ${count === 1 ? 'payment' : 'payments'}`;
+    }
+
+    if (depositsEl) depositsEl.textContent = formatCurrency(entry.depositsTotal || 0);
+    if (depositsCountEl) {
+      const count = Number(entry.depositsCount) || 0;
+      depositsCountEl.textContent = `${count} ${count === 1 ? 'deposit' : 'deposits'}`;
+    }
+  }
   function updateReconcilePreview() {
     const beginningInput = document.getElementById('reconcile-beginning-input');
     const statementInput = document.getElementById('reconcile-statement-input');
