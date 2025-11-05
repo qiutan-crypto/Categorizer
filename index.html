@@ -46,8 +46,35 @@
         <button data-tab="reports" class="tab-btn px-4 py-2 rounded-md text-sm font-semibold">Reports</button>
         <button data-tab="exports" class="tab-btn px-4 py-2 rounded-md text-sm font-semibold">Exports</button>
         <button data-tab="coa" class="tab-btn px-4 py-2 rounded-md text-sm font-semibold">Chart of Accounts</button>
+        <button data-tab="reconcile" class="tab-btn px-4 py-2 rounded-md text-sm font-semibold">Reconcile</button>
+  </div>
+</div>
+
+  <!-- Reconcile balances modal -->
+  <div id="reconcile-modal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40 z-50">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-4">
+      <h3 class="font-bold mb-3">Set Statement Balances</h3>
+      <div class="space-y-3">
+        <div>
+          <label for="reconcile-beginning-input" class="block text-sm font-medium text-gray-700 mb-1">Beginning Balance</label>
+          <input id="reconcile-beginning-input" type="number" step="0.01" class="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., 25775.30">
+        </div>
+        <div>
+          <label for="reconcile-statement-input" class="block text-sm font-medium text-gray-700 mb-1">Statement Ending Balance</label>
+          <input id="reconcile-statement-input" type="number" step="0.01" class="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., 18066.16">
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-sm text-gray-600">
+          <div class="flex justify-between"><span>Beginning Balance:</span><span id="reconcile-preview-beginning">$0.00</span></div>
+          <div class="flex justify-between"><span>Statement Balance:</span><span id="reconcile-preview-statement">$0.00</span></div>
+          <div class="flex justify-between font-semibold"><span>Difference:</span><span id="reconcile-preview-difference">$0.00</span></div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <button id="reconcile-cancel" class="px-3 py-2 rounded-md bg-slate-200">Cancel</button>
+        <button id="reconcile-save" class="px-3 py-2 rounded-md bg-emerald-600 text-white">Save</button>
       </div>
     </div>
+  </div>
 
     <!-- Tab contents -->
     <section id="tab-contents">
@@ -262,6 +289,68 @@
           </table>
         </div>
       </div>
+
+      <div data-content="reconcile" class="tab-content hidden bg-white rounded-lg shadow p-4 space-y-6">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 class="font-bold text-lg">Reconcile</h2>
+            <p class="text-sm text-gray-600">Review beginning balance, cleared activity, and compare with your bank statement.</p>
+          </div>
+          <button id="reconcile-set-balances" class="px-4 py-2 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-500 transition">
+            Set Statement Balances
+          </button>
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-5">
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Beginning Balance</div>
+            <div id="reconcile-beginning" class="mt-1 text-xl font-bold text-gray-800">$0.00</div>
+          </div>
+          <div class="rounded-lg border border-red-200 bg-red-50 p-4 shadow-sm">
+            <div class="flex items-center justify-between text-xs font-semibold text-red-600 uppercase tracking-wide">
+              <span>Payments</span>
+              <span id="reconcile-payments-count" class="text-[11px] font-medium text-red-500"></span>
+            </div>
+            <div id="reconcile-payments" class="mt-1 text-xl font-bold text-red-600">-$0.00</div>
+          </div>
+          <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <div class="flex items-center justify-between text-xs font-semibold text-emerald-600 uppercase tracking-wide">
+              <span>Deposits</span>
+              <span id="reconcile-deposits-count" class="text-[11px] font-medium text-emerald-500"></span>
+            </div>
+            <div id="reconcile-deposits" class="mt-1 text-xl font-bold text-emerald-600">$0.00</div>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Cleared Balance</div>
+            <div id="reconcile-cleared" class="mt-1 text-xl font-bold text-gray-800">$0.00</div>
+          </div>
+          <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
+            <div class="text-xs font-semibold text-amber-600 uppercase tracking-wide">Difference</div>
+            <div id="reconcile-difference" class="mt-1 text-xl font-bold text-amber-600">$0.00</div>
+            <div id="reconcile-statement" class="mt-2 text-xs text-gray-600">Statement Ending Balance: $0.00</div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-sm font-semibold text-gray-600 mb-2">Monthly Ending Balances</h3>
+          <div class="overflow-x-auto border border-slate-200 rounded-md">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-50 text-gray-500 uppercase text-xs tracking-wide">
+                <tr>
+                  <th class="px-3 py-2 text-left">Month</th>
+                  <th class="px-3 py-2 text-right">Net Activity</th>
+                  <th class="px-3 py-2 text-right">Ending Balance</th>
+                </tr>
+              </thead>
+              <tbody id="reconcile-monthly-body" class="bg-white">
+                <tr>
+                  <td class="px-3 py-3 text-center text-gray-400" colspan="3">No transactions available.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -359,7 +448,9 @@ const state = {
     dragSelecting: false,
     dragStartOrder: null,
     dragMoved: false,
-    dragJustFinished: false
+    dragJustFinished: false,
+    beginningBalance: 0,
+    statementBalance: 0
   };
 
   // === Utilities ===
@@ -1019,6 +1110,7 @@ const state = {
     document.querySelector(`[data-content="${tab}"]`).classList.remove('hidden');
     state.sort.tab = tab;
     if (tab === 'reports') updateReports();
+    if (tab === 'reconcile') updateReconcileView();
   }));
 
   document.querySelectorAll('.report-tab-btn').forEach(btn => {
@@ -1442,6 +1534,173 @@ const state = {
     return amount > 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
   }
 
+  function getTransactionAmount(tx) {
+    if (!tx || typeof tx !== 'object') return 0;
+    return parseAmount(tx['Amount'] ?? tx['amount'] ?? tx.Amount ?? 0);
+  }
+
+  function coerceDateValue(raw) {
+    if (raw === null || raw === undefined || raw === '') return null;
+    if (raw instanceof Date) {
+      const copy = new Date(raw.getTime());
+      return Number.isNaN(copy.getTime()) ? null : copy;
+    }
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+      if (typeof XLSX !== 'undefined' && XLSX.SSF && typeof XLSX.SSF.parse_date_code === 'function') {
+        const parsed = XLSX.SSF.parse_date_code(raw);
+        if (parsed && parsed.y) return new Date(parsed.y, parsed.m - 1, parsed.d);
+      }
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const dateFromSerial = new Date(excelEpoch.getTime() + raw * 86400000);
+      return Number.isNaN(dateFromSerial.getTime()) ? null : dateFromSerial;
+    }
+    const str = String(raw).trim();
+    if (!str) return null;
+    // ISO format
+    const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const year = Number(isoMatch[1]);
+      const month = Number(isoMatch[2]);
+      const day = Number(isoMatch[3]);
+      const isoDate = new Date(year, month - 1, day);
+      if (!Number.isNaN(isoDate.getTime())) return isoDate;
+    }
+    // MM/DD/YYYY or similar
+    const slashMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (slashMatch) {
+      let year = Number(slashMatch[3]);
+      if (year < 100) year += 2000;
+      const month = Number(slashMatch[1]);
+      const day = Number(slashMatch[2]);
+      const formatted = new Date(year, month - 1, day);
+      if (!Number.isNaN(formatted.getTime())) return formatted;
+    }
+    const parsed = new Date(str);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+    return null;
+  }
+
+  function formatMonthLabel(year, monthIndex) {
+    const date = new Date(year, monthIndex, 1);
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
+  }
+
+  function updateReconcileView() {
+    const beginning = Number(state.beginningBalance) || 0;
+    const statement = Number(state.statementBalance) || 0;
+    const txs = Array.isArray(state.transactions) ? state.transactions : [];
+    let paymentsTotal = 0;
+    let depositsTotal = 0;
+    let paymentCount = 0;
+    let depositCount = 0;
+
+    const monthlyMap = new Map();
+
+    txs.forEach(tx => {
+      const amount = getTransactionAmount(tx);
+      if (!Number.isFinite(amount) || amount === 0) return;
+      if (amount > 0) {
+        depositsTotal += amount;
+        depositCount += 1;
+      } else {
+        paymentsTotal += amount;
+        paymentCount += 1;
+      }
+      const rawDate = tx['Cleared Date'] ?? tx['Date'] ?? tx.date ?? null;
+      const date = coerceDateValue(rawDate);
+      if (!date) return;
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      monthlyMap.set(key, (monthlyMap.get(key) || 0) + amount);
+    });
+
+    const cleared = beginning + paymentsTotal + depositsTotal;
+    const difference = statement - cleared;
+
+    const beginningEl = document.getElementById('reconcile-beginning');
+    const paymentsEl = document.getElementById('reconcile-payments');
+    const depositsEl = document.getElementById('reconcile-deposits');
+    const clearedEl = document.getElementById('reconcile-cleared');
+    const statementEl = document.getElementById('reconcile-statement');
+    const differenceEl = document.getElementById('reconcile-difference');
+    const paymentsCountEl = document.getElementById('reconcile-payments-count');
+    const depositsCountEl = document.getElementById('reconcile-deposits-count');
+
+    if (beginningEl) beginningEl.textContent = formatCurrency(beginning);
+    if (paymentsEl) paymentsEl.textContent = formatCurrency(paymentsTotal);
+    if (depositsEl) depositsEl.textContent = formatCurrency(depositsTotal);
+    if (clearedEl) clearedEl.textContent = formatCurrency(cleared);
+    if (statementEl) statementEl.textContent = `Statement Ending Balance: ${formatCurrency(statement)}`;
+    if (paymentsCountEl) paymentsCountEl.textContent = `${paymentCount} ${paymentCount === 1 ? 'payment' : 'payments'}`;
+    if (depositsCountEl) depositsCountEl.textContent = `${depositCount} ${depositCount === 1 ? 'deposit' : 'deposits'}`;
+    if (differenceEl) {
+      differenceEl.textContent = formatCurrency(difference);
+      const base = 'mt-1 text-xl font-bold';
+      const tone = Math.abs(difference) < 0.01 ? ' text-emerald-600' : difference > 0 ? ' text-amber-600' : ' text-rose-600';
+      differenceEl.className = base + tone;
+    }
+
+    const monthlyBody = document.getElementById('reconcile-monthly-body');
+    if (monthlyBody) {
+      if (monthlyMap.size === 0) {
+        monthlyBody.innerHTML = '<tr><td class="px-3 py-3 text-center text-gray-400" colspan="3">No transactions available.</td></tr>';
+      } else {
+        const entries = Array.from(monthlyMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+        let runningBalance = beginning;
+        const rows = entries.map(([key, net]) => {
+          const [yearStr, monthStr] = key.split('-');
+          const label = formatMonthLabel(Number(yearStr), Number(monthStr) - 1);
+          runningBalance += net;
+          return `
+            <tr class="border-b last:border-b-0">
+              <td class="px-3 py-2 text-gray-700">${label}</td>
+              <td class="px-3 py-2 text-right ${net >= 0 ? 'text-emerald-600 font-semibold' : 'text-red-600 font-semibold'}">${formatCurrency(net)}</td>
+              <td class="px-3 py-2 text-right font-semibold text-gray-700">${formatCurrency(runningBalance)}</td>
+            </tr>`;
+        }).join('');
+        monthlyBody.innerHTML = rows;
+      }
+    }
+  }
+
+  function updateReconcilePreview() {
+    const beginningInput = document.getElementById('reconcile-beginning-input');
+    const statementInput = document.getElementById('reconcile-statement-input');
+    if (!beginningInput || !statementInput) return;
+    const beginning = Number(beginningInput.value) || 0;
+    const statement = Number(statementInput.value) || 0;
+    const difference = statement - beginning;
+    const previewBeginning = document.getElementById('reconcile-preview-beginning');
+    const previewStatement = document.getElementById('reconcile-preview-statement');
+    const previewDifference = document.getElementById('reconcile-preview-difference');
+    if (previewBeginning) previewBeginning.textContent = formatCurrency(beginning);
+    if (previewStatement) previewStatement.textContent = formatCurrency(statement);
+    if (previewDifference) {
+      previewDifference.textContent = formatCurrency(difference);
+      const base = 'font-semibold';
+      const tone = Math.abs(difference) < 0.01 ? ' text-emerald-600' : difference > 0 ? ' text-amber-600' : ' text-rose-600';
+      previewDifference.className = base + tone;
+    }
+  }
+
+  function openReconcileModal() {
+    const modal = document.getElementById('reconcile-modal');
+    if (!modal) return;
+    const beginningInput = document.getElementById('reconcile-beginning-input');
+    const statementInput = document.getElementById('reconcile-statement-input');
+    if (beginningInput) beginningInput.value = Number.isFinite(Number(state.beginningBalance)) ? Number(state.beginningBalance).toFixed(2) : '';
+    if (statementInput) statementInput.value = Number.isFinite(Number(state.statementBalance)) ? Number(state.statementBalance).toFixed(2) : '';
+    updateReconcilePreview();
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  }
+
+  function closeReconcileModal() {
+    const modal = document.getElementById('reconcile-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+
   function fallbackCopyToClipboard(text) {
     try {
       const textarea = document.createElement('textarea');
@@ -1729,6 +1988,7 @@ const state = {
     netEl.className = net >= 0 ? 'text-green-600 text-lg font-bold' : 'text-red-600 text-lg font-bold';
     renderBalanceSheet(balanceData);
     setReportView(state.reportView);
+    updateReconcileView();
   }
 
   function renderReportTables(incomeObj, cogsObj, expenseObj) {
@@ -2201,6 +2461,28 @@ const state = {
   if (copySelectionButton) copySelectionButton.addEventListener('click', copySelectedTransactions);
   const copySelectionAssignedButton = document.getElementById('copy-selection-assigned');
   if (copySelectionAssignedButton) copySelectionAssignedButton.addEventListener('click', copySelectedTransactions);
+  const reconcileSetButton = document.getElementById('reconcile-set-balances');
+  if (reconcileSetButton) reconcileSetButton.addEventListener('click', openReconcileModal);
+  const reconcileCancelButton = document.getElementById('reconcile-cancel');
+  if (reconcileCancelButton) reconcileCancelButton.addEventListener('click', () => {
+    closeReconcileModal();
+  });
+  const reconcileSaveButton = document.getElementById('reconcile-save');
+  if (reconcileSaveButton) reconcileSaveButton.addEventListener('click', () => {
+    const beginningInput = document.getElementById('reconcile-beginning-input');
+    const statementInput = document.getElementById('reconcile-statement-input');
+    const beginningVal = beginningInput ? Number(beginningInput.value) || 0 : 0;
+    const statementVal = statementInput ? Number(statementInput.value) || 0 : 0;
+    state.beginningBalance = beginningVal;
+    state.statementBalance = statementVal;
+    closeReconcileModal();
+    updateReconcileView();
+    showMessage('Reconcile balances updated.', 'success', 2500);
+  });
+  const reconcileBeginningInput = document.getElementById('reconcile-beginning-input');
+  if (reconcileBeginningInput) reconcileBeginningInput.addEventListener('input', updateReconcilePreview);
+  const reconcileStatementInput = document.getElementById('reconcile-statement-input');
+  if (reconcileStatementInput) reconcileStatementInput.addEventListener('input', updateReconcilePreview);
 
   // === Auto-populate COA dropdowns when COA changes ===
   function refreshAllFromCoa() { refreshAllDropdowns(); }
@@ -2209,6 +2491,7 @@ const state = {
   function initSample() {
     // no sample COA entries by default; render current COA (empty initially)
     renderCoa(); refreshAllDropdowns();
+    updateReconcileView();
   }
   initSample();
 
