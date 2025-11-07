@@ -241,7 +241,7 @@
             <p class="text-sm text-gray-600">Create QuickBooks Desktop IIF files for your chart of accounts and journal entries.</p>
           </div>
         </div>
-        <div class="grid gap-4 md:grid-cols-3">
+        <div class="grid gap-4 md:grid-cols-4">
           <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
             <h3 class="text-base font-semibold text-gray-800 mb-2">Chart of Accounts</h3>
             <p class="text-xs text-gray-600 mb-3">Exports the accounts referenced by your categorized transactions, including inferred QuickBooks account types.</p>
@@ -270,6 +270,14 @@
             </div>
             <p id="export-rules-message" class="mt-2 text-sm font-semibold text-gray-500"></p>
           </div>
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+            <h3 class="text-base font-semibold text-gray-800 mb-2">Classified Transactions</h3>
+            <p class="text-xs text-gray-600 mb-3">Exports all categorized transactions to Excel (Date, Description, Amount, and Schedule C Category).</p>
+            <button id="export-classified-excel-button" class="px-4 py-2 bg-teal-600 text-white rounded-md shadow hover:bg-teal-500 transition">
+              Download Excel
+            </button>
+            <p id="export-classified-message" class="mt-2 text-sm font-semibold text-gray-500"></p>
+          </div>
         </div>
       </div>
 
@@ -284,7 +292,28 @@
         </div>
         <div class="overflow-x-auto border rounded-md">
           <table id="coa-table" class="min-w-full text-sm">
-            <thead class="bg-gray-50"><tr><th class="px-3 py-2 text-left">Account Name</th><th class="px-3 py-2 text-left">Account Type</th><th class="px-3 py-2 text-left">Description</th></tr></thead>
+            <thead class="bg-gray-50">
+              <tr>
+                <th data-coa-sort="Account Name" aria-sort="none" class="px-3 py-2 text-left cursor-pointer select-none">
+                  <span class="inline-flex items-center gap-1">
+                    Account Name
+                    <span data-coa-sort-indicator class="text-xs text-slate-500 transition-opacity duration-150 opacity-0"></span>
+                  </span>
+                </th>
+                <th data-coa-sort="Account Type" aria-sort="none" class="px-3 py-2 text-left cursor-pointer select-none">
+                  <span class="inline-flex items-center gap-1">
+                    Account Type
+                    <span data-coa-sort-indicator class="text-xs text-slate-500 transition-opacity duration-150 opacity-0"></span>
+                  </span>
+                </th>
+                <th data-coa-sort="Description" aria-sort="none" class="px-3 py-2 text-left cursor-pointer select-none">
+                  <span class="inline-flex items-center gap-1">
+                    Description
+                    <span data-coa-sort-indicator class="text-xs text-slate-500 transition-opacity duration-150 opacity-0"></span>
+                  </span>
+                </th>
+              </tr>
+            </thead>
             <tbody id="coa-body" class="bg-white"></tbody>
           </table>
         </div>
@@ -362,24 +391,31 @@
         </div>
 
         <div id="reconcile-detail-view" class="space-y-6 hidden">
-          <div>
+          <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <p id="reconcile-detail-subtitle" class="text-sm text-gray-600">Select a month from the summary to view its transactions.</p>
+            <div class="flex items-center gap-2">
+              <button id="reconcile-detail-toggle" class="hidden px-3 py-1.5 text-sm font-semibold rounded-md bg-slate-500 text-white shadow hover:bg-slate-600 transition disabled:opacity-50 disabled:cursor-not-allowed">Switch Debit/Credit</button>
+              <button id="reconcile-detail-add" class="hidden px-3 py-1.5 text-sm font-semibold rounded-md bg-indigo-600 text-white shadow hover:bg-indigo-500 transition">Add Transaction</button>
+              <button id="reconcile-detail-delete" class="hidden px-3 py-1.5 text-sm font-semibold rounded-md bg-red-600 text-white shadow hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed">Delete Selected</button>
+            </div>
           </div>
 
           <div class="overflow-x-auto border border-slate-200 rounded-md">
             <table class="min-w-full text-sm">
               <thead class="bg-gray-50 text-gray-500 uppercase text-xs tracking-wide">
                 <tr>
+                  <th class="px-3 py-2 text-left"><input id="reconcile-detail-select-all" type="checkbox" class="rounded border-slate-300" /></th>
                   <th class="px-3 py-2 text-left">Date</th>
                   <th class="px-3 py-2 text-left">Description</th>
                   <th class="px-3 py-2 text-right">Withdraw</th>
                   <th class="px-3 py-2 text-right">Deposit</th>
                   <th class="px-3 py-2 text-right">Daily Balance</th>
+                  <th class="px-3 py-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody id="reconcile-detail-body" class="bg-white">
                 <tr>
-                  <td class="px-3 py-3 text-center text-gray-400" colspan="5">No month selected.</td>
+                  <td class="px-3 py-3 text-center text-gray-400" colspan="7">No month selected.</td>
                 </tr>
               </tbody>
             </table>
@@ -441,6 +477,7 @@
           <option>Checking or savings</option>
           <option>Credit card account</option>
           <option>Cost of goods sold</option>
+          <option>Fixed asset</option>
           <option>Capital / Equity</option>
           <option>Expense</option>
           <option>Income</option>
@@ -477,18 +514,47 @@
         </div>
       </div>
     </div>
+  </div>
 
-        <!-- Confirm modal (non-blocking) -->
-        <div id="confirm-modal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40 z-50">
-          <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-4">
-            <h3 class="font-bold mb-3">Confirm</h3>
-            <div id="confirm-message" class="mb-4 text-sm text-gray-700"></div>
-            <div class="flex justify-end gap-2">
-              <button id="confirm-no" class="px-3 py-2 bg-slate-200 rounded">Cancel</button>
-              <button id="confirm-yes" class="px-3 py-2 bg-amber-500 text-white rounded">OK</button>
-            </div>
-          </div>
+  <!-- Confirm modal (non-blocking) -->
+  <div id="confirm-modal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40 z-50">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-4">
+      <h3 class="font-bold mb-3">Confirm</h3>
+      <div id="confirm-message" class="mb-4 text-sm text-gray-700"></div>
+      <div class="flex justify-end gap-2">
+        <button id="confirm-no" class="px-3 py-2 bg-slate-200 rounded">Cancel</button>
+        <button id="confirm-yes" class="px-3 py-2 bg-amber-500 text-white rounded">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transaction edit/add modal -->
+  <div id="transaction-modal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40 z-50">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 id="transaction-modal-title" class="font-bold text-lg">Edit Transaction</h3>
+        <button id="transaction-modal-close" class="text-sm text-gray-500 hover:text-gray-700">&times;</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label for="transaction-date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+          <input id="transaction-date" type="date" class="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
+        <div>
+          <label for="transaction-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <input id="transaction-description" type="text" class="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Description" />
+        </div>
+        <div>
+          <label for="transaction-amount" class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+          <input id="transaction-amount" type="number" step="0.01" class="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Use negative for payments" />
+          <p class="mt-1 text-xs text-gray-500">Enter deposits as positive amounts and payments as negative amounts.</p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="transaction-modal-cancel" class="px-3 py-2 rounded-md bg-slate-200 text-sm font-semibold">Cancel</button>
+        <button id="transaction-modal-save" class="px-3 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold">Save</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -512,8 +578,13 @@ const state = {
     reconcileView: 'summary',
     reconcileMonthlyData: [],
     selectedReconcileMonthKey: null,
+    selectedMonthlyTxIndexes: new Set(),
+    transactionModalMode: null,
+    transactionModalIndex: null,
+    transactionModalMonthKey: null,
     beginningBalance: 0,
-    statementBalance: 0
+    statementBalance: 0,
+    coaSort: { column: null, direction: 'asc' }
   };
 
   // === Utilities ===
@@ -528,6 +599,7 @@ const state = {
       if (n.includes('draw')) return ['EQUITY', 'Capital / Equity'];
     if (n.includes('card') || n.includes('credit')) return ['CCARD','Credit card account'];
     if (n.includes('cost of goods sold') || n.includes('cogs')) return ['COGS','Cost of goods sold'];
+    if (n.includes('fixed asset') || n.includes('fixed assets')) return ['FIXASSET','Fixed asset'];
     if (n.includes('equity') || n.includes("owner's draw") || n.includes("owner's contribution") || n.includes('capital')) return ['EQUITY','Capital / Equity'];
     if (n.includes('income') || n.includes('sales') || n.includes('revenue')) return ['INC','Income'];
     if (n.includes('liability') || n.includes('loan') || n.includes('note payable')) return ['LTLIAB','Long term liability'];
@@ -556,21 +628,66 @@ const state = {
     renderAssigned();
   }
 
-  function applyAccountRename(account, newName) {
-    if (!account) return false;
+  async function applyAccountRename(account, newName) {
+    if (!account) return { status: 'failed' };
     const oldNameRaw = account['Account Name'] ?? '';
     const oldName = oldNameRaw.toString().trim();
     const updatedName = (newName ?? '').toString().trim();
     if (!updatedName) {
       showMessage('Account name cannot be empty.', 'warning', 2500);
-      return false;
+      return { status: 'failed' };
     }
     const lowerUpdated = updatedName.toLowerCase();
     const lowerOld = oldName.toLowerCase();
-    const duplicate = state.coaTable.some(acc => acc !== account && (acc['Account Name'] || '').toString().trim().toLowerCase() === lowerUpdated);
-    if (duplicate) {
-      showMessage('An account with that name already exists.', 'error', 3000);
-      return false;
+    const duplicateAccount = state.coaTable.find(acc => acc !== account && (acc['Account Name'] || '').toString().trim().toLowerCase() === lowerUpdated);
+    if (duplicateAccount) {
+      const confirmed = await showConfirm(`An account named "${updatedName}" already exists. Merge these accounts?`);
+      if (!confirmed) {
+        showMessage('Merge cancelled; account name unchanged.', 'info', 2500);
+        return { status: 'cancelled' };
+      }
+
+      const targetName = (duplicateAccount['Account Name'] ?? updatedName).toString().trim() || updatedName;
+
+      state.transactions.forEach(tx => {
+        if (!tx) return;
+        const currentRaw = tx['Schedule C Category'];
+        const trimmedCurrent = (currentRaw ?? '').toString().trim().toLowerCase();
+        if (trimmedCurrent === lowerOld) {
+          tx['Schedule C Category'] = targetName;
+        }
+      });
+
+      if (Array.isArray(state.rules)) {
+        state.rules.forEach(rule => {
+          if (!rule) return;
+          if (typeof rule.category === 'string' && rule.category.trim().toLowerCase() === lowerOld) {
+            rule.category = targetName;
+          }
+          if (typeof rule.Category === 'string' && rule.Category.trim().toLowerCase() === lowerOld) {
+            rule.Category = targetName;
+          }
+        });
+      }
+
+      if (state.assignedFilter && state.assignedFilter.trim().toLowerCase() === lowerOld) {
+        state.assignedFilter = targetName;
+      }
+
+      if ((!duplicateAccount['Account Type'] || !duplicateAccount['Account Type'].toString().trim()) && account['Account Type']) {
+        duplicateAccount['Account Type'] = account['Account Type'];
+      }
+      if ((!duplicateAccount['Description'] || !duplicateAccount['Description'].toString().trim()) && account['Description']) {
+        duplicateAccount['Description'] = account['Description'];
+      }
+
+      const idx = state.coaTable.indexOf(account);
+      if (idx !== -1) {
+        state.coaTable.splice(idx, 1);
+      }
+
+      showMessage(`Merged account into "${targetName}".`, 'success', 3000);
+      return { status: 'merged', name: targetName };
     }
 
     account['Account Name'] = updatedName;
@@ -600,7 +717,7 @@ const state = {
     state.assignedFilter = updatedName;
   }
 
-  return true;
+  return { status: 'renamed', name: updatedName };
 }
 
   function updateSelectionUI() {
@@ -828,6 +945,11 @@ const state = {
     return value;
   }
 
+  function normalizeColumnKey(key) {
+    if (key === null || key === undefined) return '';
+    return key.toString().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
   function mapAccountTypeToIifType(account) {
     if (!account) return '';
     const typeMap = {
@@ -836,6 +958,7 @@ const state = {
       'savings': 'BANK',
       'credit card account': 'CCARD',
       'cost of goods sold': 'COGS',
+      'fixed asset': 'FIXASSET',
       'capital / equity': 'EQUITY',
       'equity': 'EQUITY',
       'expense': 'EXP',
@@ -1563,6 +1686,46 @@ const state = {
     updateSelectionUI();
   }
 
+  function updateMonthlyControls() {
+    const isDetail = state.reconcileView === 'detail';
+    const hasMonth = !!state.selectedReconcileMonthKey;
+    const hasSelection = state.selectedMonthlyTxIndexes && state.selectedMonthlyTxIndexes.size > 0;
+    const toggleBtn = document.getElementById('reconcile-detail-toggle');
+    if (toggleBtn) {
+      toggleBtn.classList.toggle('hidden', !isDetail);
+      toggleBtn.disabled = !isDetail || !hasSelection;
+    }
+    const addBtn = document.getElementById('reconcile-detail-add');
+    if (addBtn) {
+      addBtn.classList.toggle('hidden', !isDetail);
+      addBtn.disabled = !isDetail || !hasMonth;
+      addBtn.classList.toggle('opacity-50', !hasMonth);
+      addBtn.classList.toggle('cursor-not-allowed', !hasMonth);
+    }
+    const deleteBtn = document.getElementById('reconcile-detail-delete');
+    if (deleteBtn) {
+      deleteBtn.classList.toggle('hidden', !isDetail);
+      deleteBtn.disabled = !isDetail || !hasSelection;
+    }
+    const selectAll = document.getElementById('reconcile-detail-select-all');
+    if (selectAll) {
+      const disabled = !isDetail || !hasMonth;
+      selectAll.disabled = disabled;
+      if (disabled) {
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+      }
+    }
+  }
+
+  function handleMonthlySelection(index, selected) {
+    if (!Number.isInteger(index)) return;
+    if (!state.selectedMonthlyTxIndexes) state.selectedMonthlyTxIndexes = new Set();
+    if (selected) state.selectedMonthlyTxIndexes.add(index);
+    else state.selectedMonthlyTxIndexes.delete(index);
+    renderReconcileDetail();
+  }
+
   function setReconcileView(view) {
     const desired = view === 'detail' ? 'detail' : 'summary';
     state.reconcileView = desired;
@@ -1571,6 +1734,10 @@ const state = {
     const detailSection = document.getElementById('reconcile-detail-view');
     if (summarySection) summarySection.classList.toggle('hidden', desired !== 'summary');
     if (detailSection) detailSection.classList.toggle('hidden', desired !== 'detail');
+
+    if (desired === 'detail') {
+      renderReconcileDetail();
+    }
 
     const rangeEl = document.getElementById('reconcile-detail-current-range');
     if (rangeEl) {
@@ -1588,9 +1755,7 @@ const state = {
       btn.classList.toggle('text-gray-600', !isActive);
     });
 
-    if (desired === 'detail') {
-      renderReconcileDetail();
-    }
+    updateMonthlyControls();
   }
 
   function getTransactionCopyDate(tx) {
@@ -1683,6 +1848,24 @@ const state = {
   function formatMonthLabel(year, monthIndex) {
     const date = new Date(year, monthIndex, 1);
     return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
+  }
+
+  function formatDateForInput(raw) {
+    const date = coerceDateValue(raw);
+    if (!date) return '';
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
+  }
+
+  function normalizeInputDate(value) {
+    if (!value) return '';
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [year, month, day] = value.split('-');
+      return `${month}/${day}/${year}`;
+    }
+    const str = formatDateForIif(value);
+    return str || '';
   }
 
   function updateReconcileView() {
@@ -1810,7 +1993,8 @@ const state = {
             description: tx.description,
             amount: tx.amount,
             showBalance: isLastOfDay,
-            runningBalance: isLastOfDay ? monthRunning : null
+            runningBalance: isLastOfDay ? monthRunning : null,
+            originalIndex: tx.originalIndex
           });
         });
         dayBuffer = [];
@@ -1882,7 +2066,6 @@ const state = {
 
     state.reconcileMonthlyData = monthlyEntries;
 
-    renderReconcileDetail();
     setReconcileView(state.reconcileView || 'summary');
   }
 
@@ -1901,22 +2084,80 @@ const state = {
     const selectedKey = state.selectedReconcileMonthKey;
     const entry = selectedKey ? data.find(item => item.key === selectedKey) : null;
     const defaultSubtitle = 'Select a month from the summary to view its transactions.';
+    const selectionSet = state.selectedMonthlyTxIndexes || (state.selectedMonthlyTxIndexes = new Set());
 
-    const rows = document.querySelectorAll('#reconcile-monthly-body tr');
-    rows.forEach(row => {
+    const summaryRows = document.querySelectorAll('#reconcile-monthly-body tr');
+    summaryRows.forEach(row => {
       if (row.dataset && row.dataset.monthKey === selectedKey) row.classList.add('bg-indigo-50/70');
       else row.classList.remove('bg-indigo-50/70');
     });
 
-    if (!entry || !entry.rows || entry.rows.length === 0) {
-      if (subtitleEl) subtitleEl.textContent = defaultSubtitle;
+    const headerRow = document.querySelector('#reconcile-detail-body')?.closest('table')?.querySelector('thead tr');
+    const buildHeader = (extraCols) => {
+      if (!headerRow) return;
+      const extraHeaderCells = extraCols.map(field => `<th class="px-3 py-2 text-left">${field}</th>`).join('');
+      headerRow.innerHTML = `
+        <th class="px-3 py-2 text-left"><input id="reconcile-detail-select-all" type="checkbox" class="rounded border-slate-300" /></th>
+        <th class="px-3 py-2 text-left">Date</th>
+        <th class="px-3 py-2 text-left">Description</th>
+        ${extraHeaderCells}
+        <th class="px-3 py-2 text-right">Withdraw</th>
+        <th class="px-3 py-2 text-right">Deposit</th>
+        <th class="px-3 py-2 text-right">Daily Balance</th>
+        <th class="px-3 py-2 text-right">Actions</th>`;
+    };
+
+    const hasRows = entry && Array.isArray(entry.rows) && entry.rows.length > 0;
+    const extraFields = [];
+    if (hasRows) {
+      const excludedNormalized = new Set([
+        'date','cleared date','transaction date','transactions date','txn date','posted date',
+        'description','memo','payee','details',
+        'amount','deposit','deposits','money in','credit','charge','withdrawal','withdrawals','money out','debit','schedule c category'
+      ].map(normalizeColumnKey));
+      const fieldOrder = [];
+      const fieldMap = new Map();
+      entry.rows.forEach(row => {
+        const tx = Number.isInteger(row.originalIndex) ? state.transactions[row.originalIndex] : null;
+        if (!tx || typeof tx !== 'object') return;
+        Object.keys(tx).forEach(key => {
+          const normalized = normalizeColumnKey(key);
+          if (!normalized || excludedNormalized.has(normalized)) return;
+          if (!fieldMap.has(normalized)) {
+            fieldMap.set(normalized, key);
+            fieldOrder.push(normalized);
+          }
+        });
+      });
+      fieldOrder.forEach(normalized => {
+        const originalKey = fieldMap.get(normalized);
+        if (originalKey) extraFields.push(originalKey);
+      });
+    }
+
+    buildHeader(extraFields);
+    const selectAllCheckbox = document.getElementById('reconcile-detail-select-all');
+
+    if (!hasRows) {
+      selectionSet.clear();
+      const hasEntry = !!entry;
+      if (subtitleEl) {
+        if (hasEntry) {
+          const monthLabel = entry?.label || 'this month';
+          subtitleEl.textContent = `No transactions found for ${monthLabel}.`;
+        } else {
+          subtitleEl.textContent = defaultSubtitle;
+        }
+      }
       if (rangeEl) {
         rangeEl.textContent = '';
         rangeEl.dataset.rangeAvailable = '';
         rangeEl.classList.add('hidden');
       }
       if (bodyEl) {
-        bodyEl.innerHTML = '<tr><td class="px-3 py-3 text-center text-gray-400" colspan="5">No month selected.</td></tr>';
+        const colSpan = 7 + extraFields.length;
+        const message = hasEntry ? 'No transactions available for this month.' : 'No month selected.';
+        bodyEl.innerHTML = `<tr><td class="px-3 py-3 text-center text-gray-400" colspan="${colSpan}">${message}</td></tr>`;
       }
       if (beginningEl) beginningEl.textContent = formatCurrency(0);
       if (paymentsEl) paymentsEl.textContent = formatCurrency(0);
@@ -1924,6 +2165,13 @@ const state = {
       if (endingEl) endingEl.textContent = formatCurrency(0);
       if (paymentsCountEl) paymentsCountEl.textContent = '';
       if (depositsCountEl) depositsCountEl.textContent = '';
+      if (selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.disabled = true;
+        selectAllCheckbox.onchange = null;
+      }
+      updateMonthlyControls();
       return;
     }
 
@@ -1942,11 +2190,54 @@ const state = {
       rangeEl.classList.toggle('hidden', !shouldShow);
     }
 
+    const validIndexes = new Set(entry.rows.map(row => row.originalIndex).filter(Number.isInteger));
+    selectionSet.forEach(idx => {
+      if (!validIndexes.has(idx)) selectionSet.delete(idx);
+    });
+
+    if (selectAllCheckbox) {
+      const selectedCount = Array.from(selectionSet).filter(idx => validIndexes.has(idx)).length;
+      selectAllCheckbox.disabled = entry.rows.length === 0;
+      selectAllCheckbox.checked = entry.rows.length > 0 && selectedCount === entry.rows.length;
+      selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < entry.rows.length;
+      selectAllCheckbox.onchange = (ev) => {
+        if (ev.target.checked) {
+          entry.rows.forEach(row => {
+            if (Number.isInteger(row.originalIndex)) selectionSet.add(row.originalIndex);
+          });
+        } else {
+          entry.rows.forEach(row => {
+            if (Number.isInteger(row.originalIndex)) selectionSet.delete(row.originalIndex);
+          });
+        }
+        renderReconcileDetail();
+      };
+    }
+
     if (bodyEl) {
       bodyEl.innerHTML = '';
       entry.rows.forEach(row => {
         const tr = document.createElement('tr');
-        tr.className = 'border-b last:border-b-0';
+        tr.className = 'border-b last:border-b-0 hover:bg-gray-50';
+        const originalIndex = row.originalIndex;
+        const canSelect = Number.isInteger(originalIndex);
+        const isSelected = canSelect && selectionSet.has(originalIndex);
+        if (isSelected) tr.classList.add('bg-indigo-50');
+
+        const tx = canSelect ? state.transactions[originalIndex] : null;
+
+        const selectTd = document.createElement('td');
+        selectTd.className = 'px-3 py-2 text-center';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'rounded border-slate-300';
+        cb.checked = isSelected;
+        cb.disabled = !canSelect;
+        cb.addEventListener('change', (ev) => {
+          if (!canSelect) return;
+          handleMonthlySelection(originalIndex, ev.target.checked);
+        });
+        selectTd.appendChild(cb);
 
         const dateTd = document.createElement('td');
         dateTd.className = 'px-3 py-2 text-gray-700 whitespace-nowrap';
@@ -1955,6 +2246,14 @@ const state = {
         const descTd = document.createElement('td');
         descTd.className = 'px-3 py-2 text-gray-700';
         descTd.textContent = row.description || '';
+
+        const extraTds = extraFields.map(fieldName => {
+          const td = document.createElement('td');
+          td.className = 'px-3 py-2 text-gray-700';
+          const value = tx ? getDisplayValueForColumn(fieldName, tx[fieldName]) : '';
+          td.textContent = value === undefined || value === null ? '' : value;
+          return td;
+        });
 
         const withdrawTd = document.createElement('td');
         withdrawTd.className = 'px-3 py-2 text-right text-red-600 font-semibold';
@@ -1970,17 +2269,41 @@ const state = {
           ? formatCurrency(row.runningBalance)
           : '';
 
+        const actionsTd = document.createElement('td');
+        actionsTd.className = 'px-3 py-2 text-right no-copy';
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'text-indigo-600 hover:text-indigo-800 text-xs font-semibold';
+        editBtn.textContent = 'Edit';
+        editBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          if (Number.isInteger(originalIndex)) openTransactionModal('edit', originalIndex);
+        });
+        actionsTd.appendChild(editBtn);
+
+        tr.appendChild(selectTd);
         tr.appendChild(dateTd);
         tr.appendChild(descTd);
+        extraTds.forEach(td => tr.appendChild(td));
         tr.appendChild(withdrawTd);
         tr.appendChild(depositTd);
         tr.appendChild(balanceTd);
+        tr.appendChild(actionsTd);
+
+        tr.addEventListener('click', (ev) => {
+          const tag = (ev.target.tagName || '').toUpperCase();
+          if (tag === 'INPUT' || tag === 'BUTTON' || tag === 'A') return;
+          if (!canSelect) return;
+          const nextState = !selectionSet.has(originalIndex);
+          handleMonthlySelection(originalIndex, nextState);
+        });
 
         bodyEl.appendChild(tr);
       });
 
       if (entry.rows.length === 0) {
-        bodyEl.innerHTML = '<tr><td class="px-3 py-3 text-center text-gray-400" colspan="5">No transactions available for this month.</td></tr>';
+        const colSpan = 7 + extraFields.length;
+        bodyEl.innerHTML = `<tr><td class="px-3 py-3 text-center text-gray-400" colspan="${colSpan}">No transactions available for this month.</td></tr>`;
       }
     }
 
@@ -1998,6 +2321,249 @@ const state = {
       const count = Number(entry.depositsCount) || 0;
       depositsCountEl.textContent = `${count} ${count === 1 ? 'deposit' : 'deposits'}`;
     }
+
+    updateMonthlyControls();
+  }
+
+  function openTransactionModal(mode, transactionIndex = null) {
+    if (!mode) return;
+    if (mode === 'add' && !state.selectedReconcileMonthKey) {
+      showMessage('Select a month first.', 'warning', 2500);
+      return;
+    }
+    const modal = document.getElementById('transaction-modal');
+    if (!modal) return;
+    const title = document.getElementById('transaction-modal-title');
+    const dateInput = document.getElementById('transaction-date');
+    const descriptionInput = document.getElementById('transaction-description');
+    const amountInput = document.getElementById('transaction-amount');
+
+    state.transactionModalMode = mode;
+    state.transactionModalIndex = transactionIndex;
+    state.transactionModalMonthKey = state.selectedReconcileMonthKey;
+
+    if (mode === 'edit') {
+      if (!Number.isInteger(transactionIndex) || !state.transactions[transactionIndex]) {
+        showMessage('Could not locate the selected transaction.', 'error', 3000);
+        return;
+      }
+      const tx = state.transactions[transactionIndex];
+      if (title) title.textContent = 'Edit Transaction';
+      if (dateInput) dateInput.value = formatDateForInput(tx['Cleared Date'] ?? tx['Date'] ?? '');
+      const desc = resolveFieldValue(tx, 'Description') || resolveFieldValue(tx, 'Memo') || getTransactionCopyDescription(tx);
+      if (descriptionInput) descriptionInput.value = desc || '';
+      const amount = parseAmount(tx['Amount'] ?? tx['amount'] ?? tx.Amount ?? 0);
+      if (amountInput) amountInput.value = Number.isFinite(amount) ? amount.toFixed(2) : '';
+    } else {
+      if (title) title.textContent = 'Add Transaction';
+      let defaultIsoDate = '';
+      const key = state.selectedReconcileMonthKey;
+      if (key && /^(\d{4})-(\d{2})$/.test(key)) {
+        const [, year, month] = key.match(/^(\d{4})-(\d{2})$/);
+        defaultIsoDate = `${year}-${month}-01`;
+      } else {
+        const today = new Date();
+        defaultIsoDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      }
+      if (dateInput) dateInput.value = defaultIsoDate;
+      if (descriptionInput) descriptionInput.value = '';
+      if (amountInput) amountInput.value = '';
+    }
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    if (dateInput) dateInput.focus();
+  }
+
+  function closeTransactionModal() {
+    const modal = document.getElementById('transaction-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+    state.transactionModalMode = null;
+    state.transactionModalIndex = null;
+    state.transactionModalMonthKey = null;
+  }
+
+  function getMonthKeyFromDate(raw) {
+    const date = coerceDateValue(raw);
+    if (!date) return null;
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  function saveTransactionModal() {
+    const mode = state.transactionModalMode;
+    if (!mode) return;
+    const dateInput = document.getElementById('transaction-date');
+    const descriptionInput = document.getElementById('transaction-description');
+    const amountInput = document.getElementById('transaction-amount');
+    if (!dateInput || !descriptionInput || !amountInput) return;
+
+    const rawDate = dateInput.value;
+    const description = descriptionInput.value.trim();
+    const rawAmount = amountInput.value;
+    if (!rawDate) {
+      showMessage('Enter a transaction date.', 'warning', 2500);
+      return;
+    }
+    if (!rawAmount || Number.isNaN(Number(rawAmount))) {
+      showMessage('Enter a valid amount.', 'warning', 2500);
+      return;
+    }
+    const amount = Number(rawAmount);
+    if (!Number.isFinite(amount) || Math.abs(amount) < 1e-9) {
+      showMessage('Amount cannot be zero.', 'warning', 2500);
+      return;
+    }
+    const displayDate = normalizeInputDate(rawDate);
+    if (!displayDate) {
+      showMessage('Invalid date.', 'error', 3000);
+      return;
+    }
+    const newMonthKey = getMonthKeyFromDate(displayDate);
+
+    if (mode === 'edit') {
+      const idx = state.transactionModalIndex;
+      if (!Number.isInteger(idx) || !state.transactions[idx]) {
+        showMessage('Could not locate the selected transaction.', 'error', 3000);
+        closeTransactionModal();
+        return;
+      }
+      const tx = state.transactions[idx];
+      tx['Date'] = displayDate;
+      tx['Cleared Date'] = displayDate;
+      if (Object.prototype.hasOwnProperty.call(tx, 'Transaction Date')) tx['Transaction Date'] = displayDate;
+      if (Object.prototype.hasOwnProperty.call(tx, 'Transactions Date')) tx['Transactions Date'] = displayDate;
+      if (Object.prototype.hasOwnProperty.call(tx, 'Txn Date')) tx['Txn Date'] = displayDate;
+      if (Object.prototype.hasOwnProperty.call(tx, 'Posted Date')) tx['Posted Date'] = displayDate;
+      tx['Description'] = description;
+      if (Object.prototype.hasOwnProperty.call(tx, 'Memo')) tx['Memo'] = description;
+      tx['Amount'] = amount;
+      if (Object.prototype.hasOwnProperty.call(tx, 'amount')) tx['amount'] = amount;
+    } else if (mode === 'add') {
+      const newTx = {
+        'Date': displayDate,
+        'Cleared Date': displayDate,
+        'Transaction Date': displayDate,
+        'Transactions Date': displayDate,
+        'Txn Date': displayDate,
+        'Description': description,
+        'Memo': description,
+        'Payee': description,
+        'Amount': amount,
+        'amount': amount,
+        'Schedule C Category': ''
+      };
+      state.transactions.push(newTx);
+    }
+
+    if (newMonthKey) {
+      state.selectedReconcileMonthKey = newMonthKey;
+    }
+
+    state.selectedTxIndexes.clear();
+    state.anchorIndex = null;
+    state.anchorContext = null;
+    state.selectionContext = null;
+    if (state.selectedMonthlyTxIndexes) state.selectedMonthlyTxIndexes.clear();
+
+    closeTransactionModal();
+    renderUnassigned();
+    renderAssigned();
+    updateReports();
+    refreshAllDropdowns();
+
+    const message = mode === 'edit' ? 'Transaction updated.' : 'Transaction added.';
+    showMessage(message, 'success', 2500);
+  }
+
+  function formatAmountString(value) {
+    if (!Number.isFinite(value)) return '0.00';
+    const clean = Math.abs(value) < 0.00001 ? 0 : value;
+    return clean.toFixed(2);
+  }
+
+  async function deleteSelectedMonthlyTransactions() {
+    showMessage('Processing selected transactions...', 'info', 1500);
+    const selected = state.selectedMonthlyTxIndexes instanceof Set
+      ? Array.from(state.selectedMonthlyTxIndexes)
+      : [];
+    const normalizedIndexes = selected
+      .map(idx => (typeof idx === 'string' ? Number(idx) : idx))
+      .filter(idx => Number.isInteger(idx) && idx >= 0);
+    if (normalizedIndexes.length === 0) {
+      showMessage('Select at least one monthly transaction to delete.', 'warning', 2500);
+      return;
+    }
+    const uniqueIndexes = Array.from(new Set(normalizedIndexes)).sort((a, b) => a - b);
+    const confirmText = uniqueIndexes.length === 1
+      ? 'Delete the selected transaction?'
+      : `Delete ${uniqueIndexes.length} selected transactions?`;
+    const ok = await showConfirm(confirmText);
+    if (!ok) return;
+
+    uniqueIndexes.sort((a, b) => b - a).forEach(idx => {
+      if (idx >= 0 && idx < state.transactions.length) {
+        state.transactions.splice(idx, 1);
+      }
+    });
+
+    state.selectedMonthlyTxIndexes.clear();
+    state.selectedTxIndexes.clear();
+    state.anchorIndex = null;
+    state.anchorContext = null;
+    state.selectionContext = null;
+
+    renderUnassigned();
+    renderAssigned();
+    updateReports();
+    refreshAllDropdowns();
+    renderReconcileDetail();
+    updateMonthlyControls();
+    showMessage(`Deleted ${uniqueIndexes.length} transaction${uniqueIndexes.length === 1 ? '' : 's'}.`, 'success', 2500);
+  }
+
+  function switchMonthlyDebitCredit() {
+    const indexes = Array.from(state.selectedMonthlyTxIndexes).filter(idx => Number.isInteger(idx));
+    if (!indexes.length) {
+      showMessage('Select at least one monthly transaction first.', 'warning', 2500);
+      return;
+    }
+    const depositFields = ['Deposit', 'Deposits', 'Money In', 'Credit', 'CREDIT', 'credit'];
+    const withdrawalFields = ['Withdrawal', 'Withdrawals', 'Money Out', 'Debit', 'DEBIT', 'Charge', 'charge'];
+    indexes.forEach(idx => {
+      const tx = state.transactions[idx];
+      if (!tx) return;
+      let currentAmount = parseAmount(tx['Amount'] ?? tx['amount'] ?? tx.Amount ?? 0);
+      if (!Number.isFinite(currentAmount) || Math.abs(currentAmount) < 1e-9) {
+        const creditField = depositFields.find(field => Object.prototype.hasOwnProperty.call(tx, field) && parseAmount(tx[field]) !== 0);
+        const debitField = withdrawalFields.find(field => Object.prototype.hasOwnProperty.call(tx, field) && parseAmount(tx[field]) !== 0);
+        if (creditField) currentAmount = parseAmount(tx[creditField]);
+        else if (debitField) currentAmount = -parseAmount(tx[debitField]);
+      }
+      if (!Number.isFinite(currentAmount)) return;
+      const newAmount = -currentAmount;
+      const amountString = formatAmountString(newAmount);
+      tx['Amount'] = amountString;
+      if (Object.prototype.hasOwnProperty.call(tx, 'amount')) tx['amount'] = amountString;
+
+      const setDirectional = (fields, absValue) => {
+        fields.forEach(field => {
+          if (Object.prototype.hasOwnProperty.call(tx, field)) {
+            tx[field] = absValue > 0.00001 ? formatAmountString(absValue) : '';
+          }
+        });
+      };
+
+      const positiveAmount = Math.abs(newAmount);
+      setDirectional(depositFields, newAmount > 0 ? positiveAmount : 0);
+      setDirectional(withdrawalFields, newAmount < 0 ? positiveAmount : 0);
+    });
+
+    updateReports();
+    renderUnassigned();
+    renderAssigned();
+    showMessage(`Switched debit/credit for ${indexes.length} transaction${indexes.length === 1 ? '' : 's'} in this month.`, 'success', 2500);
   }
   function updateReconcilePreview() {
     const beginningInput = document.getElementById('reconcile-beginning-input');
@@ -2202,16 +2768,101 @@ const state = {
     renderCoa(); refreshAllDropdowns(); updateReports();
   });
 
+  let coaHeadersInitialized = false;
+
+  function setCoaSort(column) {
+    if (!column) return;
+    const sortState = state.coaSort || (state.coaSort = { column: null, direction: 'asc' });
+    if (sortState.column === column) {
+      sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortState.column = column;
+      sortState.direction = 'asc';
+    }
+    renderCoa();
+  }
+
+  function updateCoaSortIndicators() {
+    const headers = document.querySelectorAll('#coa-table thead [data-coa-sort]');
+    headers.forEach(th => {
+      const column = th.dataset.coaSort;
+      const indicator = th.querySelector('[data-coa-sort-indicator]');
+      if (state.coaSort && state.coaSort.column === column) {
+        const dirChar = state.coaSort.direction === 'desc' ? '▼' : '▲';
+        if (indicator) {
+          indicator.textContent = dirChar;
+          indicator.classList.remove('opacity-0');
+        }
+        th.setAttribute('aria-sort', state.coaSort.direction === 'desc' ? 'descending' : 'ascending');
+        th.classList.add('text-indigo-600');
+      } else {
+        if (indicator) {
+          indicator.textContent = '';
+          indicator.classList.add('opacity-0');
+        }
+        th.setAttribute('aria-sort', 'none');
+        th.classList.remove('text-indigo-600');
+      }
+    });
+  }
+
+  function initCoaSortHeaders() {
+    if (coaHeadersInitialized) return;
+    const headers = document.querySelectorAll('#coa-table thead [data-coa-sort]');
+    if (!headers.length) return;
+    headers.forEach(th => {
+      if (!th.hasAttribute('tabindex')) th.tabIndex = 0;
+      const activate = () => setCoaSort(th.dataset.coaSort);
+      th.addEventListener('click', activate);
+      th.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          activate();
+        }
+      });
+    });
+    coaHeadersInitialized = true;
+    updateCoaSortIndicators();
+  }
+
   function renderCoa() {
-    const tbody = document.getElementById('coa-body'); tbody.innerHTML = '';
-    state.coaTable.forEach((a, idx) => {
+    const tbody = document.getElementById('coa-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    const rows = Array.isArray(state.coaTable)
+      ? state.coaTable.map((account, originalIndex) => ({ account, originalIndex }))
+      : [];
+
+    if (state.coaSort && state.coaSort.column) {
+      const column = state.coaSort.column;
+      const direction = state.coaSort.direction === 'desc' ? -1 : 1;
+      const normalize = (value) => {
+        if (value === null || value === undefined) return '';
+        return value.toString().trim().toLowerCase();
+      };
+      rows.sort((a, b) => {
+        const valA = normalize(a.account[column]);
+        const valB = normalize(b.account[column]);
+        const compare = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+        if (compare !== 0) return compare * direction;
+        const fallback = normalize(a.account['Account Name']).localeCompare(
+          normalize(b.account['Account Name']),
+          undefined,
+          { numeric: true, sensitivity: 'base' }
+        );
+        if (fallback !== 0) return fallback * direction;
+        return a.originalIndex - b.originalIndex;
+      });
+    }
+
+    rows.forEach(({ account }) => {
       const tr = document.createElement('tr'); tr.className='border-b hover:bg-gray-50';
       const nameTd = document.createElement('td');
       nameTd.className = 'px-3 py-2';
       nameTd.contentEditable = true;
-      nameTd.textContent = a['Account Name'];
-      nameTd.addEventListener('blur', () => {
-        const originalRaw = (a['Account Name'] ?? '').toString();
+      nameTd.textContent = account['Account Name'];
+      nameTd.addEventListener('blur', async () => {
+        const originalRaw = (account['Account Name'] ?? '').toString();
         const storedName = originalRaw.trim();
         const proposed = (nameTd.textContent || '').trim();
         if (!proposed) {
@@ -2223,26 +2874,34 @@ const state = {
           nameTd.textContent = storedName;
           return;
         }
-        const renamed = applyAccountRename(a, proposed);
-        if (!renamed) {
+        const result = await applyAccountRename(account, proposed);
+        if (!result || result.status === 'failed' || result.status === 'cancelled') {
           nameTd.textContent = storedName;
           return;
         }
-        nameTd.textContent = a['Account Name'];
+        if (result.status === 'merged') {
+          renderCoa();
+          refreshAllDropdowns();
+          updateReports();
+          return;
+        }
+        nameTd.textContent = account['Account Name'];
         refreshAllDropdowns();
         updateReports();
-        showMessage(`Renamed account to ${a['Account Name']}`, 'success', 2000);
+        showMessage(`Renamed account to ${account['Account Name']}`, 'success', 2000);
       });
       const typeTd = document.createElement('td'); typeTd.className='px-3 py-2';
       const typeSelect = document.createElement('select'); typeSelect.className='rounded border px-2 py-1';
-      ['Checking or savings','Credit card account','Cost of goods sold','Capital / Equity','Expense','Income','Other expense','Other income','Long term liability','Other current liability'].forEach(opt => { const o = document.createElement('option'); o.value=opt; o.textContent=opt; if (a['Account Type']===opt) o.selected=true; typeSelect.appendChild(o); });
-      typeSelect.addEventListener('change', () => { a['Account Type'] = typeSelect.value; updateReports(); });
+      ['Checking or savings','Credit card account','Cost of goods sold','Fixed asset','Capital / Equity','Expense','Income','Other expense','Other income','Long term liability','Other current liability'].forEach(opt => { const o = document.createElement('option'); o.value=opt; o.textContent=opt; if (account['Account Type']===opt) o.selected=true; typeSelect.appendChild(o); });
+      typeSelect.addEventListener('change', () => { account['Account Type'] = typeSelect.value; updateReports(); });
       typeTd.appendChild(typeSelect);
-      const descTd = document.createElement('td'); descTd.className='px-3 py-2'; descTd.contentEditable=true; descTd.textContent = a['Description'] || '';
-      descTd.addEventListener('blur', () => { a['Description'] = descTd.textContent; });
+      const descTd = document.createElement('td'); descTd.className='px-3 py-2'; descTd.contentEditable=true; descTd.textContent = account['Description'] || '';
+      descTd.addEventListener('blur', () => { account['Description'] = descTd.textContent; });
       tr.appendChild(nameTd); tr.appendChild(typeTd); tr.appendChild(descTd);
       tbody.appendChild(tr);
     });
+
+    updateCoaSortIndicators();
   }
 
   // === Reports (Real-Time) ===
@@ -2298,6 +2957,14 @@ const state = {
       }
     });
 
+    const totalExpCombined = totalCogs + totalExpense;
+    const net = totalIncome - totalExpCombined;
+    const retainedName = 'Retained Earnings';
+    if (Math.abs(net) > 0.00001) {
+      balanceBuckets.equity[retainedName] = (balanceBuckets.equity[retainedName] || 0) + net;
+      rawBalanceTotals.equity += net;
+    }
+
     const toBalanceRows = bucket => Object.entries(bucket)
       .map(([name, raw]) => ({ name, rawTotal: raw, displayTotal: Math.abs(raw) }))
       .filter(row => row.displayTotal > 0.00001)
@@ -2317,12 +2984,11 @@ const state = {
     balanceData.balanceDifference = balanceData.rawAssets - (balanceData.rawLiabilities + balanceData.rawEquity);
 
     renderReportTables(income, cogs, expense);
-    const totalExpCombined = totalCogs + totalExpense;
     document.getElementById('total-income').textContent = formatCurrency(totalIncome);
     document.getElementById('total-expense').textContent = formatCurrency(totalExpCombined);
-    const net = totalIncome - totalExpCombined;
     const netEl = document.getElementById('net-profit'); netEl.textContent = formatCurrency(net);
     netEl.className = net >= 0 ? 'text-green-600 text-lg font-bold' : 'text-red-600 text-lg font-bold';
+
     renderBalanceSheet(balanceData);
     setReportView(state.reportView);
     updateReconcileView();
@@ -2468,6 +3134,19 @@ const state = {
 
   function triggerIifDownload(filename, content) {
     triggerDownload(filename || 'export.iif', content, 'text/plain;charset=utf-8');
+  }
+
+  function triggerBinaryDownload(filename, data, mime='application/octet-stream') {
+    const safeName = (filename || 'export.bin').replace(/[\\\/:*?"<>|]+/g, '_');
+    const blob = data instanceof Blob ? data : new Blob([data], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = safeName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   function generateCoaIifContent() {
@@ -2788,12 +3467,55 @@ const state = {
     setExportMessage('export-journal-message', `Exported ${result.count} transaction${result.count === 1 ? '' : 's'} to IIF.${suffix}`, 'success');
   }
 
+  function handleClassifiedExcelExport() {
+    setExportMessage('export-classified-message', '');
+    if (typeof XLSX === 'undefined' || !XLSX.utils || typeof XLSX.utils.aoa_to_sheet !== 'function') {
+      setExportMessage('export-classified-message', 'Excel export unavailable (SheetJS not loaded).', 'error');
+      return;
+    }
+    const rows = [['Date', 'Description', 'Amount', 'Schedule C Category']];
+    let count = 0;
+    const txs = Array.isArray(state.transactions) ? state.transactions : [];
+    txs.forEach(tx => {
+      if (!tx) return;
+      const category = (tx['Schedule C Category'] || '').toString().trim();
+      if (!category) return;
+      const date = getTransactionCopyDate(tx) || '';
+      const description = getTransactionCopyDescription(tx) || '';
+      const amountNumber = parseAmount(tx['Amount'] ?? tx['amount'] ?? tx.Amount ?? 0);
+      const amountValue = Number.isFinite(amountNumber) ? amountNumber : 0;
+      rows.push([date, description, amountValue, category]);
+      count++;
+    });
+    if (count === 0) {
+      setExportMessage('export-classified-message', 'No categorized transactions available to export.', 'error');
+      return;
+    }
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Classified');
+    const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const stamp = new Date().toISOString().slice(0, 10);
+    triggerBinaryDownload(
+      `Classified_Transactions_${stamp}.xlsx`,
+      wbout,
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    setExportMessage(
+      'export-classified-message',
+      `Exported ${count} classified transaction${count === 1 ? '' : 's'} to Excel.`,
+      'success'
+    );
+  }
+
   const exportCoaButton = document.getElementById('export-coa-button');
   if (exportCoaButton) exportCoaButton.addEventListener('click', handleCoaExportClick);
   const exportJournalButton = document.getElementById('export-journal-button');
   if (exportJournalButton) exportJournalButton.addEventListener('click', handleJournalExportClick);
   const exportRulesCsvButton = document.getElementById('export-rules-csv-button');
   if (exportRulesCsvButton) exportRulesCsvButton.addEventListener('click', handleRulesCsvExportClick);
+  const exportClassifiedExcelButton = document.getElementById('export-classified-excel-button');
+  if (exportClassifiedExcelButton) exportClassifiedExcelButton.addEventListener('click', handleClassifiedExcelExport);
   const copySelectionButton = document.getElementById('copy-selection-button');
   if (copySelectionButton) copySelectionButton.addEventListener('click', copySelectedTransactions);
   const copySelectionAssignedButton = document.getElementById('copy-selection-assigned');
@@ -2820,6 +3542,18 @@ const state = {
   if (reconcileBeginningInput) reconcileBeginningInput.addEventListener('input', updateReconcilePreview);
   const reconcileStatementInput = document.getElementById('reconcile-statement-input');
   if (reconcileStatementInput) reconcileStatementInput.addEventListener('input', updateReconcilePreview);
+  const reconcileDetailAddButton = document.getElementById('reconcile-detail-add');
+  if (reconcileDetailAddButton) reconcileDetailAddButton.addEventListener('click', () => openTransactionModal('add'));
+  const transactionModalCancel = document.getElementById('transaction-modal-cancel');
+  if (transactionModalCancel) transactionModalCancel.addEventListener('click', closeTransactionModal);
+  const transactionModalClose = document.getElementById('transaction-modal-close');
+  if (transactionModalClose) transactionModalClose.addEventListener('click', closeTransactionModal);
+  const transactionModalSave = document.getElementById('transaction-modal-save');
+  if (transactionModalSave) transactionModalSave.addEventListener('click', saveTransactionModal);
+  const reconcileDetailToggle = document.getElementById('reconcile-detail-toggle');
+  if (reconcileDetailToggle) reconcileDetailToggle.addEventListener('click', switchMonthlyDebitCredit);
+  const reconcileDetailDeleteButton = document.getElementById('reconcile-detail-delete');
+  if (reconcileDetailDeleteButton) reconcileDetailDeleteButton.addEventListener('click', deleteSelectedMonthlyTransactions);
 
   // === Auto-populate COA dropdowns when COA changes ===
   function refreshAllFromCoa() { refreshAllDropdowns(); }
@@ -2827,6 +3561,7 @@ const state = {
   // === Startup ===
   function initSample() {
     // no sample COA entries by default; render current COA (empty initially)
+    initCoaSortHeaders();
     renderCoa(); refreshAllDropdowns();
     updateReconcileView();
   }
