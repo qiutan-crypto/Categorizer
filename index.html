@@ -1002,16 +1002,6 @@ const state = {
     return 'other';
   }
 
-  function getUsedAccountNames() {
-    const used = new Set();
-    state.transactions.forEach(tx => {
-      if (!tx) return;
-      const name = (tx['Schedule C Category'] || tx['Schedule C category'] || '').toString().trim();
-      if (name) used.add(name);
-    });
-    return used;
-  }
-
   function resolveFieldValue(tx, fieldName) {
     if (!tx || !fieldName) return '';
     const target = fieldName.toLowerCase().trim();
@@ -3153,11 +3143,6 @@ const state = {
     if (!Array.isArray(state.coaTable) || state.coaTable.length === 0) {
       return { content: '', count: 0, missingTypeCount: 0 };
     }
-    const usedAccounts = getUsedAccountNames();
-    if (usedAccounts.size === 0) {
-      return { content: '', count: 0, missingTypeCount: 0 };
-    }
-    const usedLookup = new Set(Array.from(usedAccounts).map(name => name.toLowerCase()));
     const seen = new Set();
     const lines = ['!ACCNT\tNAME\tACCNTTYPE\tDESC'];
     let count = 0;
@@ -3165,7 +3150,7 @@ const state = {
     state.coaTable.forEach(account => {
       const rawName = (account && account['Account Name']) ? String(account['Account Name']).trim() : '';
       const key = rawName.toLowerCase();
-      if (!rawName || seen.has(key) || !usedLookup.has(key)) return;
+      if (!rawName || seen.has(key)) return;
       seen.add(key);
       const name = sanitizeIifValue(rawName);
       const description = sanitizeIifValue(account['Description'] || '');
@@ -3428,7 +3413,7 @@ const state = {
     setExportMessage('export-coa-message', '');
     const result = generateCoaIifContent();
     if (!result.content || result.count === 0) {
-      setExportMessage('export-coa-message', 'No categorized accounts available to export. Assign categories before exporting.', 'error');
+      setExportMessage('export-coa-message', 'No accounts available to export. Add entries to the Chart of Accounts first.', 'error');
       return;
     }
     const stamp = new Date().toISOString().slice(0, 10);
