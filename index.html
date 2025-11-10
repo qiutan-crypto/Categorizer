@@ -1953,16 +1953,30 @@ const state = {
     updateMonthlyControls();
   }
 
-  function getTransactionCopyDate(tx) {
-    const fields = ['Date', 'Transaction Date', 'Transactions Date', 'Txn Date', 'Posted Date'];
+  function resolveTransactionDateValue(tx) {
+    if (!tx) return '';
+    const fields = [
+      'Cleared Date',
+      'Date',
+      'Transaction Date',
+      'Transactions Date',
+      'Txn Date',
+      'Posted Date'
+    ];
     for (const field of fields) {
       const value = resolveFieldValue(tx, field);
-      if (value) {
-        const formatted = formatDateDisplay(value);
-        return formatted || String(value);
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        return value;
       }
     }
     return '';
+  }
+
+  function getTransactionCopyDate(tx) {
+    const raw = resolveTransactionDateValue(tx);
+    if (raw === undefined || raw === null || raw === '') return '';
+    const formatted = formatDateDisplay(raw);
+    return formatted || String(raw);
   }
 
   function getTransactionCopyDescription(tx) {
@@ -1996,6 +2010,10 @@ const state = {
 
   function getTransactionAmount(tx) {
     if (!tx || typeof tx !== 'object') return 0;
+    const raw = resolveFieldValue(tx, 'Amount');
+    if (raw !== undefined && raw !== null && String(raw).trim() !== '') {
+      return parseAmount(raw);
+    }
     return parseAmount(tx['Amount'] ?? tx['amount'] ?? tx.Amount ?? 0);
   }
 
@@ -3425,13 +3443,27 @@ const state = {
     let zeroAmount = 0;
     state.transactions.forEach(tx => {
       if (!tx) return;
-      const categoryRaw = (tx['Schedule C Category'] || '').toString().trim();
+      const categoryRaw = (resolveFieldValue(tx, 'Schedule C Category') || '').toString().trim();
       if (!categoryRaw) { missingCategory += 1; return; }
-      const amount = parseAmount(tx['Amount'] ?? tx['amount'] ?? tx.Amount ?? 0);
+      const rawAmount = resolveFieldValue(tx, 'Amount');
+      const amount = parseAmount(
+        rawAmount !== undefined && rawAmount !== null && String(rawAmount).trim() !== ''
+          ? rawAmount
+          : (tx['Amount'] ?? tx['amount'] ?? tx.Amount ?? 0)
+      );
       if (!Number.isFinite(amount) || Math.abs(amount) < 0.00001) { zeroAmount += 1; return; }
       const memo = buildJournalMemo(tx);
-      const docNum = sanitizeIifValue(tx['Doc Num'] ?? tx['DocNum'] ?? tx['Doc #'] ?? tx['Check Number'] ?? tx['Reference'] ?? tx['Ref'] ?? '');
-      const date = formatDateForIif(tx['Date'] ?? tx.Date ?? '');
+      const docFields = ['Doc Num', 'DocNum', 'Doc #', 'Check Number', 'Reference', 'Ref'];
+      let docValue = '';
+      for (const field of docFields) {
+        const value = resolveFieldValue(tx, field);
+        if (value !== undefined && value !== null && String(value).trim() !== '') {
+          docValue = value;
+          break;
+        }
+      }
+      const docNum = sanitizeIifValue(docValue || '');
+      const date = formatDateForIif(resolveTransactionDateValue(tx)) || '';
       const category = sanitizeIifValue(categoryRaw);
       if (!category) { missingCategory += 1; return; }
       if (amount > 0) {
@@ -3711,11 +3743,16 @@ const state = {
     const txs = Array.isArray(state.transactions) ? state.transactions : [];
     txs.forEach(tx => {
       if (!tx) return;
-      const category = (tx['Schedule C Category'] || '').toString().trim();
+      const category = (resolveFieldValue(tx, 'Schedule C Category') || '').toString().trim();
       if (!category) return;
       const date = getTransactionCopyDate(tx) || '';
       const description = getTransactionCopyDescription(tx) || '';
-      const amountNumber = parseAmount(tx['Amount'] ?? tx['amount'] ?? tx.Amount ?? 0);
+      const rawAmount = resolveFieldValue(tx, 'Amount');
+      const amountNumber = parseAmount(
+        rawAmount !== undefined && rawAmount !== null && String(rawAmount).trim() !== ''
+          ? rawAmount
+          : (tx['Amount'] ?? tx['amount'] ?? tx.Amount ?? 0)
+      );
       const amountValue = Number.isFinite(amountNumber) ? amountNumber : 0;
       rows.push([date, description, amountValue, category]);
       count++;
