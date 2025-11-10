@@ -22,17 +22,24 @@
     <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold">Bank Transaction Categorizer</h1>
-        <p class="text-sm opacity-90">Load transactions, classify them with your Chart of Accounts, and export.</p>
+        <p id="current-file-label" class="text-sm opacity-90 hidden"></p>
       </div>
-      <div class="flex gap-3">
+      <div class="flex gap-3 flex-wrap">
         <label class="inline-flex items-center px-4 py-2 bg-white text-slate-800 rounded-lg shadow cursor-pointer hover:shadow-md transition">
-          <input id="tx-input" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
+          <input id="tx-input" type="file" accept=".xlsx,.xls,.csv" multiple class="hidden" />
           Load Transactions
         </label>
         <label class="inline-flex items-center px-4 py-2 bg-white text-slate-800 rounded-lg shadow cursor-pointer hover:shadow-md transition">
           <input id="rules-input" type="file" accept=".json,.csv,.txt" class="hidden" />
           Load Rules
         </label>
+        <label class="inline-flex items-center px-4 py-2 bg-white text-slate-800 rounded-lg shadow cursor-pointer hover:shadow-md transition">
+          <input id="project-load-input" type="file" accept=".json" class="hidden" />
+          Load Project
+        </label>
+        <button id="export-project-button" class="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg shadow hover:shadow-md hover:bg-emerald-100 transition">
+          Export Project
+        </button>
       </div>
     </div>
   </header>
@@ -584,7 +591,8 @@ const state = {
     transactionModalMonthKey: null,
     beginningBalance: 0,
     statementBalance: 0,
-    coaSort: { column: null, direction: 'asc' }
+    coaSort: { column: null, direction: 'asc' },
+    loadedTransactionFingerprints: new Set()
   };
 
   // === Utilities ===
@@ -626,6 +634,68 @@ const state = {
     // Update transaction dropdowns if tables are visible
     renderUnassigned();
     renderAssigned();
+  }
+
+  function setCurrentFileLabel(text) {
+    const label = document.getElementById('current-file-label');
+    if (!label) return;
+    const value = (text || '').trim();
+    if (value) {
+      label.textContent = value;
+      label.classList.remove('hidden');
+    } else {
+      label.textContent = '';
+      label.classList.add('hidden');
+    }
+  }
+
+  function ensureScheduleCCategoryField(row) {
+    if (!row || typeof row !== 'object') return row;
+    const hasKey = Object.prototype.hasOwnProperty.call(row, 'Schedule C Category');
+    if (!hasKey || row['Schedule C Category'] === undefined || row['Schedule C Category'] === null) {
+      row['Schedule C Category'] = '';
+    }
+    return row;
+  }
+
+  function normalizeFingerprintValue(value) {
+    if (value === null || value === undefined) return '';
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === 'number' && !Number.isFinite(value)) return '';
+    return typeof value === 'string' ? value : String(value);
+  }
+
+  function fingerprintTransactions(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return '';
+    const perRow = rows.map(row => {
+      const keys = Object.keys(row || {}).sort();
+      return keys.map(key => `${key}:${normalizeFingerprintValue(row[key])}`).join('|');
+    });
+    return perRow.join('||');
+  }
+
+  function createProjectSnapshot() {
+    const snapshot = {
+      meta: {
+        exportedAt: new Date().toISOString(),
+        app: 'BankTransactionCategorizer',
+        version: 1
+      },
+      data: {
+        transactions: Array.isArray(state.transactions) ? state.transactions : [],
+        coaTable: Array.isArray(state.coaTable) ? state.coaTable : [],
+        rules: Array.isArray(state.rules) ? state.rules : [],
+        sort: state.sort && typeof state.sort === 'object' ? state.sort : { tab: '', column: null, direction: 'asc' },
+        reportView: state.reportView || 'pl',
+        beginningBalance: Number(state.beginningBalance) || 0,
+        statementBalance: Number(state.statementBalance) || 0,
+        reconcileView: state.reconcileView || 'summary',
+        selectedReconcileMonthKey: state.selectedReconcileMonthKey || null,
+        assignedFilter: state.assignedFilter || null,
+        loadedTransactionFingerprints: Array.from(state.loadedTransactionFingerprints || [])
+      }
+    };
+    return snapshot;
   }
 
   async function applyAccountRename(account, newName) {
@@ -1213,40 +1283,175 @@ const state = {
   });
 
   // === File loaders ===
-  document.getElementById('tx-input').addEventListener('change', async (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    const data = await f.arrayBuffer();
-    const wb = XLSX.read(data, { type: 'array' });
-    const sheetName = wb.SheetNames[0];
-    const ws = wb.Sheets[sheetName];
-    const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
-    // dynamic headers
-    state.transactions = json.map(row => {
-      if (!row['Schedule C Category']) row['Schedule C Category'] = '';
-      return row;
-    });
+  const txInput = document.getElementById('tx-input');
+  if (txInput) txInput.addEventListener('change', handleTransactionFiles);
+  const projectInput = document.getElementById('project-load-input');
+  if (projectInput) projectInput.addEventListener('change', handleProjectLoad);
+  const exportProjectButton = document.getElementById('export-project-button');
+  if (exportProjectButton) exportProjectButton.addEventListener('click', exportProjectSnapshot);
+
+  async function handleTransactionFiles(e) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    let appendedTotal = 0;
+    let skippedDuplicates = 0;
+
+    for (const file of files) {
+      try {
+        const result = await importTransactionsFromFile(file);
+        appendedTotal += result.appended || 0;
+        if (result.skippedDuplicate) skippedDuplicates += 1;
+      } catch (err) {
+        console.error('Failed to load transactions from file', file?.name, err);
+        const reason = (err && err.message) ? ` ${err.message}` : ' Unable to read the file.';
+        showMessage(`Failed to load "${file?.name}".${reason}`, 'error', 4000);
+      }
+    }
+
+    e.target.value = '';
+
+    if (appendedTotal > 0) {
+      const fileNames = files.map(f => f.name).filter(Boolean);
+      if (fileNames.length > 0) {
+        setCurrentFileLabel(fileNames.join(', '));
+      }
+
+      state.selectedTxIndexes.clear();
+      state.anchorIndex = null;
+      state.anchorContext = null;
+      state.selectionContext = null;
+
+      if (state.rules && state.rules.length > 0) {
+        addAccountsFromRules();
+        const applied = applyRules();
+        clearAppliedRuleMetadata();
+        if (applied > 0) {
+          showMessage(`Applied ${applied} rule-based classifications`, 'info', 3000);
+        }
+      }
+
+      renderUnassigned();
+      renderAssigned();
+      updateReports();
+      refreshAllDropdowns();
+      const fileLabel = files.length === 1 ? 'file' : 'files';
+      showMessage(
+        `Added ${appendedTotal} transaction${appendedTotal === 1 ? '' : 's'} from ${files.length} ${fileLabel}.`,
+        'success',
+        3500
+      );
+    } else if (skippedDuplicates > 0) {
+      showMessage('Selected file(s) matched transactions already loaded. Nothing was added.', 'warning', 3500);
+    }
+  }
+
+  function exportProjectSnapshot() {
+    try {
+      const snapshot = createProjectSnapshot();
+      const json = JSON.stringify(snapshot, null, 2);
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      triggerDownload(`ProjectBackup_${stamp}.json`, json, 'application/json');
+      showMessage('Project exported.', 'success', 3000);
+    } catch (err) {
+      console.error('exportProjectSnapshot error', err);
+      showMessage('Unable to export project.', 'error', 4000);
+    }
+  }
+
+  async function handleProjectLoad(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const snapshot = JSON.parse(text);
+      applyProjectSnapshot(snapshot);
+      showMessage(`Loaded project from "${file.name}".`, 'success', 3500);
+    } catch (err) {
+      console.error('handleProjectLoad error', err);
+      showMessage('Unable to load project. Ensure the file is valid.', 'error', 4000);
+    } finally {
+      e.target.value = '';
+    }
+  }
+
+  function applyProjectSnapshot(snapshot) {
+    const payload = snapshot && typeof snapshot === 'object'
+      ? (snapshot.data && typeof snapshot.data === 'object' ? snapshot.data : snapshot)
+      : null;
+    if (!payload || !Array.isArray(payload.transactions)) {
+      throw new Error('Project file missing transactions.');
+    }
+
+    state.transactions = payload.transactions.map(row =>
+      ensureScheduleCCategoryField(Object.assign({}, row))
+    );
+    state.coaTable = Array.isArray(payload.coaTable)
+      ? payload.coaTable.map(acc => Object.assign({}, acc))
+      : [];
+    state.rules = Array.isArray(payload.rules)
+      ? payload.rules.map(rule => Object.assign({}, rule))
+      : [];
+    state.sort = payload.sort && typeof payload.sort === 'object'
+      ? {
+          tab: payload.sort.tab || '',
+          column: Object.prototype.hasOwnProperty.call(payload.sort, 'column') ? payload.sort.column : null,
+          direction: payload.sort.direction === 'desc' ? 'desc' : 'asc'
+        }
+      : { tab: '', column: null, direction: 'asc' };
+    state.reportView = payload.reportView || 'pl';
+    state.beginningBalance = Number(payload.beginningBalance) || 0;
+    state.statementBalance = Number(payload.statementBalance) || 0;
+    state.reconcileView = payload.reconcileView === 'detail' ? 'detail' : 'summary';
+    state.selectedReconcileMonthKey = payload.selectedReconcileMonthKey || null;
+    state.assignedFilter = payload.assignedFilter || null;
+    const fingerprintArr = Array.isArray(payload.loadedTransactionFingerprints)
+      ? payload.loadedTransactionFingerprints.filter(Boolean)
+      : [];
+    state.loadedTransactionFingerprints = new Set(fingerprintArr);
+
+    if (!(state.selectedTxIndexes instanceof Set)) state.selectedTxIndexes = new Set();
     state.selectedTxIndexes.clear();
     state.anchorIndex = null;
     state.anchorContext = null;
     state.selectionContext = null;
+    state.unassignedDisplayOrder = [];
+    state.assignedDisplayOrder = [];
+    if (!(state.selectedMonthlyTxIndexes instanceof Set)) state.selectedMonthlyTxIndexes = new Set();
+    state.selectedMonthlyTxIndexes.clear();
+
+    renderCoa();
+    refreshAllDropdowns();
     renderUnassigned();
     renderAssigned();
-    // If rules already loaded, ensure COA has rule accounts then apply rules
-    if (state.rules && state.rules.length > 0) {
-      addAccountsFromRules();
-      const applied = applyRules();
-      // Remove any transient 'Applied Rule' metadata from transactions so it does not appear in tables
-      clearAppliedRuleMetadata();
-      if (applied > 0) {
-        showMessage(`Applied ${applied} rule-based classifications`, 'info', 3000);
-      }
-    }
     updateReports();
-    renderUnassigned(); renderAssigned();
-    refreshAllDropdowns();
-    showMessage('Loaded ' + state.transactions.length + ' transactions', 'info', 3000);
-  });
+    updateReconcileView();
+  }
+
+  async function importTransactionsFromFile(file) {
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data, { type: 'array' });
+    const sheetName = wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    const normalized = json.map(row => ensureScheduleCCategoryField(row));
+    if (normalized.length === 0) {
+      showMessage(`"${file.name}" did not contain any transactions.`, 'warning', 3000);
+      return { appended: 0, skippedDuplicate: false };
+    }
+    const fingerprint = fingerprintTransactions(normalized);
+    if (!state.loadedTransactionFingerprints) state.loadedTransactionFingerprints = new Set();
+    if (state.loadedTransactionFingerprints.has(fingerprint)) {
+      showMessage(`"${file.name}" matches a file you've already loaded and was skipped.`, 'warning', 3500);
+      return { appended: 0, skippedDuplicate: true };
+    }
+    state.loadedTransactionFingerprints.add(fingerprint);
+    if (!Array.isArray(state.transactions) || state.transactions.length === 0) {
+      state.transactions = normalized;
+    } else {
+      state.transactions = state.transactions.concat(normalized);
+    }
+    return { appended: normalized.length, skippedDuplicate: false };
+  }
 
   document.getElementById('rules-input').addEventListener('change', async (e) => {
     const f = e.target.files[0];
@@ -2922,12 +3127,13 @@ const state = {
       };
 
       const recordExpense = () => {
+        const value = Number.isFinite(amt) ? amt : 0;
         if (lowerType.includes('cost') || lowerType.includes('cogs') || lowerCategory.includes('cost of goods') || lowerCategory.includes('cogs')) {
-          cogs[category] = (cogs[category] || 0) + Math.abs(amt);
-          totalCogs += Math.abs(amt);
+          cogs[category] = (cogs[category] || 0) + value;
+          totalCogs += value;
         } else {
-          expense[category] = (expense[category] || 0) + Math.abs(amt);
-          totalExpense += Math.abs(amt);
+          expense[category] = (expense[category] || 0) + value;
+          totalExpense += value;
         }
       };
 
@@ -2948,22 +3154,48 @@ const state = {
     });
 
     const totalExpCombined = totalCogs + totalExpense;
-    const net = totalIncome - totalExpCombined;
+    const displayedExpenses = Math.abs(totalExpCombined);
+    const net = totalIncome - displayedExpenses;
     const retainedName = 'Retained Earnings';
     if (Math.abs(net) > 0.00001) {
       balanceBuckets.equity[retainedName] = (balanceBuckets.equity[retainedName] || 0) + net;
       rawBalanceTotals.equity += net;
     }
 
-    const toBalanceRows = bucket => Object.entries(bucket)
-      .map(([name, raw]) => ({ name, rawTotal: raw, displayTotal: Math.abs(raw) }))
-      .filter(row => row.displayTotal > 0.00001)
+    const beginningBalance = Number(state.beginningBalance) || 0;
+    if (Math.abs(beginningBalance) > 0.00001) {
+      const openingName = 'Opening Equity';
+      balanceBuckets.equity[openingName] = (balanceBuckets.equity[openingName] || 0) + beginningBalance;
+      rawBalanceTotals.equity += beginningBalance;
+    }
+
+    const statementBalance = Number(state.statementBalance) || 0;
+    if (Math.abs(statementBalance) > 0.00001) {
+      const endingName = 'Ending Balance';
+      balanceBuckets.asset[endingName] = (balanceBuckets.asset[endingName] || 0) + statementBalance;
+      rawBalanceTotals.asset += statementBalance;
+    }
+
+    const toBalanceRows = (bucket, options = {}) => {
+      const preserveSign = !!options.preserveSign;
+      const preserveNames = Array.isArray(options.preserveNames)
+        ? new Set(options.preserveNames.map(name => (name || '').toString().toLowerCase()))
+        : null;
+      return Object.entries(bucket)
+        .map(([name, raw]) => {
+          const normalizedName = (name || '').toString().toLowerCase();
+          const keepSign = preserveSign || (preserveNames && preserveNames.has(normalizedName));
+          const value = keepSign ? raw : Math.abs(raw);
+          return { name, rawTotal: raw, displayTotal: value };
+        })
+        .filter(row => Math.abs(row.displayTotal) > 0.00001)
       .sort((a, b) => a.name.localeCompare(b.name));
+    };
 
     const balanceData = {
-      assets: toBalanceRows(balanceBuckets.asset),
-      liabilities: toBalanceRows(balanceBuckets.liability),
-      equity: toBalanceRows(balanceBuckets.equity),
+      assets: toBalanceRows(balanceBuckets.asset, { preserveNames: ['Ending Balance'] }),
+      liabilities: toBalanceRows(balanceBuckets.liability, { preserveSign: true }),
+      equity: toBalanceRows(balanceBuckets.equity, { preserveSign: true }),
       rawAssets: rawBalanceTotals.asset,
       rawLiabilities: rawBalanceTotals.liability,
       rawEquity: rawBalanceTotals.equity
@@ -2971,11 +3203,17 @@ const state = {
     balanceData.totalAssets = balanceData.assets.reduce((sum, row) => sum + row.displayTotal, 0);
     balanceData.totalLiabilities = balanceData.liabilities.reduce((sum, row) => sum + row.displayTotal, 0);
     balanceData.totalEquity = balanceData.equity.reduce((sum, row) => sum + row.displayTotal, 0);
-    balanceData.balanceDifference = balanceData.rawAssets - (balanceData.rawLiabilities + balanceData.rawEquity);
+    balanceData.displayLiabilitiesEquity = balanceData.totalLiabilities + balanceData.totalEquity;
+    balanceData.balanceDifference = balanceData.totalAssets - balanceData.displayLiabilitiesEquity;
+    balanceData.rawBalanceDifference = balanceData.rawAssets - (balanceData.rawLiabilities + balanceData.rawEquity);
 
     renderReportTables(income, cogs, expense);
     document.getElementById('total-income').textContent = formatCurrency(totalIncome);
-    document.getElementById('total-expense').textContent = formatCurrency(totalExpCombined);
+    const totalExpenseEl = document.getElementById('total-expense');
+    if (totalExpenseEl) {
+      totalExpenseEl.textContent = formatCurrency(displayedExpenses);
+      totalExpenseEl.className = 'text-red-600 text-lg font-bold';
+    }
     const netEl = document.getElementById('net-profit'); netEl.textContent = formatCurrency(net);
     netEl.className = net >= 0 ? 'text-green-600 text-lg font-bold' : 'text-red-600 text-lg font-bold';
 
@@ -2997,13 +3235,21 @@ const state = {
     if (cogsEntries.length > 0) {
       // section header for COGS
       expTable.innerHTML += `<tr class="bg-slate-50"><td class="px-2 py-1 font-medium" colspan="2">Cost of Goods Sold</td></tr>`;
-      cogsEntries.forEach(([k,v]) => expTable.innerHTML += `<tr class="hover:bg-gray-50 cursor-pointer"><td class="px-2 py-1">${k}</td><td class="px-2 py-1 text-right text-red-600">${formatCurrency(v)}</td></tr>`);
+      cogsEntries.forEach(([k,v]) => {
+        const tone = v >= 0 ? 'text-emerald-600' : 'text-red-600';
+        const displayValue = Math.abs(v);
+        expTable.innerHTML += `<tr class="hover:bg-gray-50 cursor-pointer"><td class="px-2 py-1">${k}</td><td class="px-2 py-1 text-right font-semibold ${tone}">${formatCurrency(displayValue)}</td></tr>`;
+      });
     }
 
     if (expenseEntries.length > 0) {
       // section header for other expenses
       expTable.innerHTML += `<tr class="bg-slate-50"><td class="px-2 py-1 font-medium" colspan="2">Expenses</td></tr>`;
-      expenseEntries.forEach(([k,v]) => expTable.innerHTML += `<tr class="hover:bg-gray-50 cursor-pointer"><td class="px-2 py-1">${k}</td><td class="px-2 py-1 text-right text-red-600">${formatCurrency(v)}</td></tr>`);
+      expenseEntries.forEach(([k,v]) => {
+        const tone = v >= 0 ? 'text-emerald-600' : 'text-red-600';
+        const displayValue = Math.abs(v);
+        expTable.innerHTML += `<tr class="hover:bg-gray-50 cursor-pointer"><td class="px-2 py-1">${k}</td><td class="px-2 py-1 text-right font-semibold ${tone}">${formatCurrency(displayValue)}</td></tr>`;
+      });
     }
 
     // clicking a row filters assigned
@@ -3058,10 +3304,12 @@ const state = {
     setText('balance-equity-total', safe.totalEquity || 0);
 
     setText('balance-total-assets', safe.totalAssets || 0);
-    const liabilitiesEquityDisplay = (safe.totalLiabilities || 0) + (safe.totalEquity || 0);
+    const liabilitiesEquityDisplay = safe.displayLiabilitiesEquity !== undefined
+      ? safe.displayLiabilitiesEquity
+      : (safe.totalLiabilities || 0) + (safe.totalEquity || 0);
     setText('balance-total-liabilities-equity', liabilitiesEquityDisplay);
 
-    const diff = safe.balanceDifference || 0;
+    const diff = safe.balanceDifference ?? 0;
     const hasBalanceData = assets.length > 0 || liabilities.length > 0 || equity.length > 0;
     const diffAmount = document.getElementById('balance-difference');
     if (diffAmount) {
@@ -3520,7 +3768,7 @@ const state = {
     state.beginningBalance = beginningVal;
     state.statementBalance = statementVal;
     closeReconcileModal();
-    updateReconcileView();
+    updateReports();
     showMessage('Reconcile balances updated.', 'success', 2500);
   });
   const reconcileBeginningInput = document.getElementById('reconcile-beginning-input');
